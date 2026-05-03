@@ -13,7 +13,7 @@ class PythonBridge(private val context: Context) {
         }
     }
 
-    fun example_function(message: String): String {
+    fun exampleFunction(message: String): String {
         ensureStarted()
         val py = Python.getInstance()
         val module: PyObject = py.getModule("example")

@@ -3,8 +3,6 @@ package com.example.betterroads
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
-import com.chaquo.python.Python
-import com.chaquo.python.android.AndroidPlatform
 
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.example.betterroads/python"
@@ -12,16 +10,15 @@ class MainActivity: FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
-        val py = Python.getInstance()
-        val module = py.getModule("example")
+        val pythonBridge = PythonBridge(this.applicationContext)
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             try {
                 when (call.method) {
                     "example_function" -> {
-                        val message = call.argument<String>("message")
-                        val pyResult = module.callAttr("example_function", message)
-                        result.success(pyResult.toString())
+                        val message = call.argument<String>("message") ?: ""
+                        val pythonResponse = pythonBridge.exampleFunction(message)
+                        result.success(pythonResponse)
                     }
                     else -> result.notImplemented()
                 }
