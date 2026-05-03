@@ -1,9 +1,17 @@
+import 'dart:developer';
+import 'package:betterroads/python_channel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 void main() {
   runApp(const MyApp());
+
+    PythonChannel.exampleFunction('Text sent from Dart.').then((result) {
+      log('Result: $result');
+    }).catchError((error) {
+      log('Error: $error');
+    });
 }
 
 class MyApp extends StatelessWidget {
