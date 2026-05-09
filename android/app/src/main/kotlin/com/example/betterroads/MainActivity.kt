@@ -20,6 +20,29 @@ class MainActivity: FlutterActivity() {
                         val pythonResponse = pythonBridge.exampleFunction(message)
                         result.success(pythonResponse)
                     }
+                    "compute_route" -> {
+                        val startLatitude = call.argument<Double>("start_latitude")
+                        val startLongitude = call.argument<Double>("start_longitude")
+                        val destinationLatitude = call.argument<Double>("destination_latitude")
+                        val destinationLongitude = call.argument<Double>("destination_longitude")
+
+                        if (
+                            startLatitude == null ||
+                            startLongitude == null ||
+                            destinationLatitude == null ||
+                            destinationLongitude == null
+                        ) {
+                            result.error("INVALID_ARGUMENTS", "Route coordinates are required", null)
+                        } else {
+                            val pythonResponse = pythonBridge.computeRoute(
+                                startLatitude,
+                                startLongitude,
+                                destinationLatitude,
+                                destinationLongitude
+                            )
+                            result.success(pythonResponse)
+                        }
+                    }
                     else -> result.notImplemented()
                 }
             } catch (e: Exception) {

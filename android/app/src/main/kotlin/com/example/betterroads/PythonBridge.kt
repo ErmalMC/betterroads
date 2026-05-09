@@ -20,4 +20,23 @@ class PythonBridge(private val context: Context) {
         val result: PyObject = module.callAttr("example_function", message)
         return result.toString()
     }
+
+    fun computeRoute(
+        startLatitude: Double,
+        startLongitude: Double,
+        destinationLatitude: Double,
+        destinationLongitude: Double
+    ): String {
+        ensureStarted()
+        val py = Python.getInstance()
+        val module: PyObject = py.getModule("example")
+        val result: PyObject = module.callAttr(
+            "compute_route",
+            startLatitude,
+            startLongitude,
+            destinationLatitude,
+            destinationLongitude
+        )
+        return result.toString()
+    }
 }
