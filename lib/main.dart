@@ -30,6 +30,7 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   static const LatLng _initialCenter = LatLng(41.9981, 21.4254);
+  static const double _estimatedSpeedKmh = 40;
 
   LatLng? _start;
   LatLng? _end;
@@ -151,6 +152,36 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
+  String _formatDistance(double meters) {
+    if (meters >= 1000) {
+      final km = meters / 1000;
+      return '${km.toStringAsFixed(1)} km';
+    }
+    return '${meters.toStringAsFixed(0)} m';
+  }
+
+  String _formatDuration(Duration duration) {
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+    if (hours > 0) {
+      return '${hours}h ${minutes}m';
+    }
+    return '${minutes}m';
+  }
+
+  double? _routeDistanceMeters() {
+    if (_start == null || _end == null) {
+      return null;
+    }
+    final distance = const Distance();
+    return distance.as(LengthUnit.Meter, _start!, _end!);
+  }
+
+  Duration? _estimatedDuration(double meters) {
+    final hours = (meters / 1000) / _estimatedSpeedKmh;
+    return Duration(minutes: (hours * 60).round());
+  }
+
   @override
   Widget build(BuildContext context) {
     final markers = <Marker>[
@@ -264,6 +295,33 @@ class _MapScreenState extends State<MapScreen> {
       ),
     );
 
+    final distanceMeters = _routeDistanceMeters();
+    final duration = distanceMeters == null ? null : _estimatedDuration(distanceMeters);
+
+    final routeInfoPanel = Positioned(
+      left: 16,
+      right: 16,
+      bottom: 16,
+      child: Card(
+        elevation: 4,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Route info',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Text('Distance: ${distanceMeters == null ? '--' : _formatDistance(distanceMeters)}'),
+              Text('Estimated time: ${duration == null ? '--' : _formatDuration(duration)}'),
+            ],
+          ),
+        ),
+      ),
+    );
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
@@ -298,6 +356,7 @@ class _MapScreenState extends State<MapScreen> {
             ],
           ),
           searchPanel,
+          routeInfoPanel,
         ],
       ),
     );
