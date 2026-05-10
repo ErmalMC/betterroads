@@ -1,6 +1,7 @@
 import json
 import math
-from typing import Dict, List, Optional, Tuple
+from _typeshed import SupportsDunderGT, SupportsDunderLT
+from typing import Dict, List, Optional, Tuple, Any
 
 import networkx as nx
 import osmnx as ox
@@ -225,10 +226,14 @@ def _compute_route_metrics(
     return round(total_distance, 2), int(round(total_seconds))
 
 
-def _compute_bounds(polyline: List[Dict[str, float]]):
-    lats = [p["lat"] for p in polyline]
-    lngs = [p["lng"] for p in polyline]
 
+def _compute_bounds(
+    polyline: List[Dict[str, float]],
+) -> dict[str, SupportsDunderLT[Any] | SupportsDunderGT[Any]] | None:
+    if not polyline:
+        return None
+
+    lats, lngs = zip(*((p["lat"], p["lng"]) for p in polyline))
     return {
         "north": max(lats),
         "south": min(lats),
