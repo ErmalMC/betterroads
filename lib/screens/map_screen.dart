@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../helpers/route_progress.dart';
+import '../models/route_metrics.dart';
+import '../services/mock_location_service.dart';
 import '../widgets/route_info_panel.dart';
 import '../widgets/search_panel.dart';
 
@@ -28,13 +31,15 @@ class _MapScreenState extends State<MapScreen> {
     LatLng(42.0048, 21.4118),
   ];
 
+  final RouteProgressHelper _routeProgress = const RouteProgressHelper();
+
   LatLng? _start;
   LatLng? _end;
   LatLng? _currentLocation;
   bool _isSearchOpen = false;
 
-  Timer? _mockLocationTimer;
-  int _mockRouteIndex = 0;
+  MockLocationService? _mockLocationService;
+  StreamSubscription<LatLng>? _mockLocationSubscription;
 
   late final TextEditingController _startController;
   late final TextEditingController _endController;
@@ -49,23 +54,20 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   void dispose() {
-    _mockLocationTimer?.cancel();
+    _mockLocationSubscription?.cancel();
+    _mockLocationService?.stop();
     _startController.dispose();
     _endController.dispose();
     super.dispose();
   }
 
   void _startMockLocationUpdates() {
-    _mockLocationTimer?.cancel();
-    _mockRouteIndex = 0;
-    _currentLocation = _mockRoute.first;
-    _mockLocationTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (_mockRouteIndex >= _mockRoute.length - 1) {
-        return;
-      }
+    _mockLocationSubscription?.cancel();
+    _mockLocationService = MockLocationService(route: _mockRoute);
+    _currentLocation = _mockLocationService!.currentLocation;
+    _mockLocationSubscription = _mockLocationService!.start().listen((location) {
       setState(() {
-        _mockRouteIndex += 1;
-        _currentLocation = _mockRoute[_mockRouteIndex];
+        _currentLocation = location;
       });
     });
   }
@@ -172,6 +174,17 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
+  RouteMetrics _routeMetrics() {
+    if (_start == null || _end == null) {
+      return const RouteMetrics(distanceMeters: null, estimatedDuration: null);
+    }
+    final distance = const Distance();
+    final meters = distance.as(LengthUnit.Meter, _start!, _end!);
+    final hours = (meters / 1000) / _estimatedSpeedKmh;
+    final duration = Duration(minutes: (hours * 60).round());
+    return RouteMetrics(distanceMeters: meters, estimatedDuration: duration);
+  }
+
   String _formatDistance(double meters) {
     if (meters >= 1000) {
       final km = meters / 1000;
@@ -189,78 +202,10 @@ class _MapScreenState extends State<MapScreen> {
     return '${minutes}m';
   }
 
-  double? _routeDistanceMeters() {
-    if (_start == null || _end == null) {
-      return null;
-    }
-    final distance = const Distance();
-    return distance.as(LengthUnit.Meter, _start!, _end!);
-  }
-
-  Duration? _estimatedDuration(double meters) {
-    final hours = (meters / 1000) / _estimatedSpeedKmh;
-    return Duration(minutes: (hours * 60).round());
-  }
-
-  int? _closestRouteSegmentIndex(List<LatLng> route, LatLng location) {
-    if (route.length < 2) {
-      return null;
-    }
-    final distance = const Distance();
-    var bestIndex = 0;
-    var bestDistance = double.infinity;
-    for (var i = 0; i < route.length - 1; i++) {
-      final projection = _projectPointOnSegment(location, route[i], route[i + 1]);
-      final d = distance.as(LengthUnit.Meter, location, projection);
-      if (d < bestDistance) {
-        bestDistance = d;
-        bestIndex = i;
-      }
-    }
-    return bestIndex;
-  }
-
-  LatLng _projectPointOnSegment(LatLng point, LatLng start, LatLng end) {
-    final startLat = start.latitude;
-    final startLng = start.longitude;
-    final endLat = end.latitude;
-    final endLng = end.longitude;
-    final dx = endLng - startLng;
-    final dy = endLat - startLat;
-    if (dx == 0 && dy == 0) {
-      return start;
-    }
-    final t = ((point.longitude - startLng) * dx + (point.latitude - startLat) * dy) / (dx * dx + dy * dy);
-    final clamped = t.clamp(0.0, 1.0);
-    return LatLng(startLat + dy * clamped, startLng + dx * clamped);
-  }
-
-  List<LatLng> _completedRoute(List<LatLng> route, LatLng? location) {
-    if (location == null || route.length < 2) {
-      return const [];
-    }
-    final index = _closestRouteSegmentIndex(route, location);
-    if (index == null) {
-      return const [];
-    }
-    return route.sublist(0, index + 1);
-  }
-
-  List<LatLng> _remainingRoute(List<LatLng> route, LatLng? location) {
-    if (location == null || route.length < 2) {
-      return route;
-    }
-    final index = _closestRouteSegmentIndex(route, location);
-    if (index == null) {
-      return route;
-    }
-    return route.sublist(index + 1);
-  }
-
   @override
   Widget build(BuildContext context) {
-    final completedRoute = _completedRoute(_mockRoute, _currentLocation);
-    final remainingRoute = _remainingRoute(_mockRoute, _currentLocation);
+    final completedRoute = _routeProgress.completedRoute(_mockRoute, _currentLocation);
+    final remainingRoute = _routeProgress.remainingRoute(_mockRoute, _currentLocation);
 
     final markers = <Marker>[
       if (_start != null)
@@ -316,8 +261,9 @@ class _MapScreenState extends State<MapScreen> {
       canSwap: _start != null || _end != null,
     );
 
-    final distanceMeters = _routeDistanceMeters();
-    final duration = distanceMeters == null ? null : _estimatedDuration(distanceMeters);
+    final metrics = _routeMetrics();
+    final distanceText = metrics.distanceMeters == null ? '--' : _formatDistance(metrics.distanceMeters!);
+    final durationText = metrics.estimatedDuration == null ? '--' : _formatDuration(metrics.estimatedDuration!);
 
     return Scaffold(
       appBar: AppBar(
@@ -370,8 +316,8 @@ class _MapScreenState extends State<MapScreen> {
           ),
           searchPanel,
           RouteInfoPanel(
-            distanceText: distanceMeters == null ? '--' : _formatDistance(distanceMeters),
-            durationText: duration == null ? '--' : _formatDuration(duration),
+            distanceText: distanceText,
+            durationText: durationText,
           ),
         ],
       ),
