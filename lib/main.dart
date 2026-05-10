@@ -94,6 +94,17 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
+  void _swapLocations() {
+    setState(() {
+      final previousStart = _start;
+      _start = _end;
+      _end = previousStart;
+      final startText = _startController.text;
+      _startController.text = _endController.text;
+      _endController.text = startText;
+    });
+  }
+
   String _formatLatLng(LatLng point) {
     return '${point.latitude.toStringAsFixed(6)}, ${point.longitude.toStringAsFixed(6)}';
   }
@@ -167,67 +178,86 @@ class _MapScreenState extends State<MapScreen> {
         ),
     ];
 
+    final topInset = MediaQuery.of(context).padding.top + kToolbarHeight;
+    final availableHeight = MediaQuery.of(context).size.height - topInset - 8;
+    final panelHeight = (availableHeight.clamp(160.0, 320.0) as double);
+
     final searchPanel = AnimatedPositioned(
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOut,
       left: 0,
       right: 0,
-      top: _isSearchOpen ? 0 : -220,
-      child: Material(
-        elevation: 4,
-        color: Theme.of(context).colorScheme.surface,
-        child: SafeArea(
-          bottom: false,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      top: _isSearchOpen ? topInset : topInset - panelHeight - 8,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: panelHeight),
+        child: Material(
+          elevation: 4,
+          color: Theme.of(context).colorScheme.surface,
+          child: SafeArea(
+            bottom: false,
+            top: false,
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      'Search locations',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        TextButton(
-                          onPressed: _clearSearch,
-                          child: const Text('Clear'),
+                        Text(
+                          'Search locations',
+                          style: Theme.of(context).textTheme.titleMedium,
                         ),
-                        IconButton(
-                          tooltip: 'Close search',
-                          onPressed: _closeSearch,
-                          icon: const Icon(Icons.close),
+                        Row(
+                          children: [
+                            TextButton(
+                              onPressed: _clearSearch,
+                              child: const Text('Clear'),
+                            ),
+                            IconButton(
+                              tooltip: 'Close search',
+                              onPressed: _closeSearch,
+                              icon: const Icon(Icons.close),
+                            ),
+                          ],
                         ),
                       ],
                     ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _startController,
+                      decoration: const InputDecoration(
+                        labelText: 'Start location (lat, lng)',
+                        prefixIcon: Icon(Icons.trip_origin),
+                        border: OutlineInputBorder(),
+                      ),
+                      textInputAction: TextInputAction.next,
+                      onSubmitted: _handleStartSubmitted,
+                    ),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: FilledButton.tonalIcon(
+                        onPressed: (_start != null || _end != null) ? _swapLocations : null,
+                        icon: const Icon(Icons.swap_vert),
+                        label: const Text('Swap'),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _endController,
+                      decoration: const InputDecoration(
+                        labelText: 'Destination (lat, lng)',
+                        prefixIcon: Icon(Icons.flag),
+                        border: OutlineInputBorder(),
+                      ),
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: _handleEndSubmitted,
+                    ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _startController,
-                  decoration: const InputDecoration(
-                    labelText: 'Start location (lat, lng)',
-                    prefixIcon: Icon(Icons.trip_origin),
-                    border: OutlineInputBorder(),
-                  ),
-                  textInputAction: TextInputAction.next,
-                  onSubmitted: _handleStartSubmitted,
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _endController,
-                  decoration: const InputDecoration(
-                    labelText: 'Destination (lat, lng)',
-                    prefixIcon: Icon(Icons.flag),
-                    border: OutlineInputBorder(),
-                  ),
-                  textInputAction: TextInputAction.done,
-                  onSubmitted: _handleEndSubmitted,
-                ),
-              ],
+              ),
             ),
           ),
         ),
