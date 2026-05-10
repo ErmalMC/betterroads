@@ -1,6 +1,6 @@
 import json
 import math
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import networkx as nx
 import osmnx as ox
@@ -197,23 +197,30 @@ def _route_to_polyline(g, route_nodes: List[int]) -> List[Dict[str, float]]:
     return polyline
 
 
-def _compute_route_metrics(g, route_nodes: List[int], mode="driving"):
+def _fallback_speed(mode: str) -> float:
+    return WALKING_SPEED_M_PER_S if mode == "walking" else DRIVING_FALLBACK_SPEED_M_PER_S
+
+
+def _compute_route_metrics(
+    g, route_nodes: List[int], mode: str = "driving"
+) -> Tuple[float, int]:
     total_distance = 0.0
     total_seconds = 0.0
+    speed = _fallback_speed(mode)  # hoisted: mode is constant across all edges
 
     for u, v in zip(route_nodes[:-1], route_nodes[1:]):
-        edge = _edge_data_for_pair(g, u, v, "length")
+        edge = _edge_data_for_pair(g, u, v)
         if edge is None:
             continue
 
         length_m = float(edge.get("length", 0.0))
         total_distance += length_m
 
-        if "travel_time" in edge and edge["travel_time"] is not None:
-            total_seconds += float(edge["travel_time"])
-        else:
-            speed = WALKING_SPEED_M_PER_S if mode == "walking" else DRIVING_FALLBACK_SPEED_M_PER_S
-            total_seconds += length_m / speed if speed > 0 else 0.0
+        travel_time = edge.get("travel_time")
+        if travel_time is not None:
+            total_seconds += float(travel_time)
+        elif speed > 0:
+            total_seconds += length_m / speed
 
     return round(total_distance, 2), int(round(total_seconds))
 
