@@ -21,78 +21,85 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class MapScreen extends StatelessWidget {
+class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
 
-  static const LatLng _start = LatLng(41.9981, 21.4254);
-  static const LatLng _end = LatLng(42.0048, 21.4118);
-  static const List<LatLng> _sampleRoute = [
-    _start,
-    LatLng(42.0002, 21.4215),
-    LatLng(42.0026, 21.4182),
-    LatLng(42.0040, 21.4143),
-    _end,
-  ];
+  @override
+  State<MapScreen> createState() => _MapScreenState();
+}
+
+class _MapScreenState extends State<MapScreen> {
+  static const LatLng _initialCenter = LatLng(41.9981, 21.4254);
+
+  LatLng? _start;
+  LatLng? _end;
+
+  void _handleMapTap(LatLng point) {
+    setState(() {
+      if (_start == null) {
+        _start = point;
+        _end = null;
+        return;
+      }
+      if (_end == null) {
+        _end = point;
+        return;
+      }
+      _start = point;
+      _end = null;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final markers = <Marker>[
+      if (_start != null)
+        Marker(
+          point: _start!,
+          width: 40,
+          height: 40,
+          child: const Icon(
+            Icons.location_on,
+            color: Colors.green,
+            size: 36,
+          ),
+        ),
+      if (_end != null)
+        Marker(
+          point: _end!,
+          width: 40,
+          height: 40,
+          child: const Icon(
+            Icons.flag,
+            color: Colors.red,
+            size: 30,
+          ),
+        ),
+    ];
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('Better Roads'),
       ),
       body: FlutterMap(
-        options: const MapOptions(
-          initialCenter: _start,
+        options: MapOptions(
+          initialCenter: _initialCenter,
           initialZoom: 13,
           minZoom: 3,
           maxZoom: 18,
-          interactionOptions: InteractionOptions(
+          interactionOptions: const InteractionOptions(
             flags: InteractiveFlag.all,
           ),
+          onTap: (_, point) => _handleMapTap(point),
         ),
         children: [
           TileLayer(
             urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
             userAgentPackageName: 'betterroads',
           ),
-          PolylineLayer(
-            polylines: [
-              Polyline(
-                points: _sampleRoute,
-                color: Colors.black.withOpacity(0.8),
-                strokeWidth: 8,
-              ),
-              Polyline(
-                points: _sampleRoute,
-                color: Colors.yellowAccent,
-                strokeWidth: 5,
-              ),
-            ],
-          ),
           MarkerLayer(
-            markers: [
-              Marker(
-                point: _start,
-                width: 40,
-                height: 40,
-                child: const Icon(
-                  Icons.location_on,
-                  color: Colors.green,
-                  size: 36,
-                ),
-              ),
-              Marker(
-                point: _end,
-                width: 40,
-                height: 40,
-                child: const Icon(
-                  Icons.flag,
-                  color: Colors.red,
-                  size: 30,
-                ),
-              ),
-            ],
+            markers: markers,
           ),
         ],
       ),
