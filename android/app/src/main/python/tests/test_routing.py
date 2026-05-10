@@ -6,7 +6,7 @@ import unittest
 import webbrowser
 from pathlib import Path
 
-from routing import OSRM_DEFAULT_BASE_URL, calculate_route
+from android.app.src.main.python.routing import OSRM_DEFAULT_BASE_URL, calculate_route
 
 
 class TestCalculateRoute(unittest.TestCase):
@@ -57,6 +57,43 @@ class TestCalculateRoute(unittest.TestCase):
             "longer walk — cross district",
             41.9981, 21.4254, 41.9935, 21.4112,
             mode="walking",
+            osrm_base_url=self.OSRM_URL,
+            map_matching=True,
+        )
+        self.assertEqual(data["status"], "success")
+        self.assertGreaterEqual(len(data["route"]["polyline"]), 2)
+
+    def test_longer_walk_least_curved(self):
+        data = self._run_and_track(
+            "longer walk — cross district",
+            41.9981, 21.4254, 41.9935, 21.4112,
+            mode="walking",
+            use_curvature=True,
+            curvature_weight=0.3,
+            osrm_base_url=self.OSRM_URL,
+            map_matching=True,
+        )
+        self.assertEqual(data["status"], "success")
+        self.assertGreaterEqual(len(data["route"]["polyline"]), 2)
+
+    def test_longer_drive_with_map_matching(self):
+        data = self._run_and_track(
+            "longer drive — cross district",
+            41.9981, 21.4254, 41.986706, 21.427359,
+            mode="driving",
+            osrm_base_url=self.OSRM_URL,
+            map_matching=True,
+        )
+        self.assertEqual(data["status"], "success")
+        self.assertGreaterEqual(len(data["route"]["polyline"]), 2)
+
+    def test_longer_drive_least_curved(self):
+        data = self._run_and_track(
+            "longer drive — cross district",
+            41.9981, 21.4254, 41.986706, 21.427359,
+            mode="driving",
+            use_curvature=True,
+            curvature_weight=0.3,
             osrm_base_url=self.OSRM_URL,
             map_matching=True,
         )
@@ -333,6 +370,21 @@ if __name__ == "__main__":
             "label": "longer walk — cross district",
             "args": (41.9981, 21.4254, 41.9935, 21.4112),
             "kwargs": {"mode": "walking", "osrm_base_url": OSRM_URL, "map_matching": True},
+        },
+        {
+            "label": "longer walk — cross district",
+            "args": (41.9981, 21.4254, 41.9935, 21.4112),
+            "kwargs": {"mode": "walking", "use_curvature": True, "curvature_weight": 0.3, "osrm_base_url": OSRM_URL, "map_matching": True},
+        },
+        {
+            "label": "longer drive — cross district",
+            "args": (41.9981, 21.4254, 41.986706, 21.427359),
+            "kwargs": {"mode": "driving", "osrm_base_url": OSRM_URL, "map_matching": True},
+        },
+        {
+            "label": "longer drive — cross district",
+            "args": (41.9981, 21.4254, 41.986706, 21.427359),
+            "kwargs": {"mode": "driving", "use_curvature": True, "curvature_weight": 0.3, "osrm_base_url": OSRM_URL, "map_matching": True},
         },
     ]
 

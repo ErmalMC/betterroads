@@ -1,10 +1,5 @@
-import http.server
 import json
 import math
-import os
-import threading
-import webbrowser
-from pathlib import Path
 from typing import Dict, List, Optional
 
 import networkx as nx
@@ -69,8 +64,10 @@ def _get_graph(origin_lat, origin_lon, dest_lat, dest_lon, mode="driving"):
 
     return g
 
+def _prepare_graph_weights(g, mode="driving", use_curvature=False, curvature_weight=0.3):
+    if use_curvature:
+        return _prepare_graph_weights_with_curvature(g, mode, curvature_weight)
 
-def _prepare_graph_weights(g, mode="driving"):
     for _, _, _, data in g.edges(keys=True, data=True):
         if "length" not in data or data["length"] is None:
             data["length"] = 0.0
@@ -102,6 +99,94 @@ def _edge_data_for_pair(g, u, v, weight_key="length"):
         key=lambda k: float(edge_dict[k].get(weight_key, float("inf"))),
     )
     return edge_dict[best_key]
+
+def _calculate_bearing(lat1, lon1, lat2, lon2):
+    p1 = math.radians(lat1)
+    p2 = math.radians(lat2)
+    dl = math.radians(lon2 - lon1)
+
+    y = math.sin(dl) * math.cos(p2)
+    x = math.cos(p1) * math.sin(p2) - math.sin(p1) * math.cos(p2) * math.cos(dl)
+    bearing = math.degrees(math.atan2(y, x))
+    return (bearing + 360) % 360
+
+def _calculate_turn_angle(bearing1, bearing2):
+    angle_diff = abs(bearing2 - bearing1)
+    # Take the shortest angle (0-180 degrees)
+    if angle_diff > 180:
+        angle_diff = 360 - angle_diff
+    return angle_diff
+
+def _compute_edge_curvature(g, u, v):
+    node_u = g.nodes[u]
+    node_v = g.nodes[v]
+
+    lat_u, lon_u = node_u["y"], node_u["x"]
+    lat_v, lon_v = node_v["y"], node_v["x"]
+
+    predecessors = list(g.predecessors(u))
+    successors = list(g.successors(v))
+
+    total_turn_angle = 0.0
+    turn_count = 0
+
+    if predecessors:
+        for pred in predecessors:
+            lat_p = g.nodes[pred]["y"]
+            lon_p = g.nodes[pred]["x"]
+            bearing_in = _calculate_bearing(lat_p, lon_p, lat_u, lon_u)
+            bearing_out = _calculate_bearing(lat_u, lon_u, lat_v, lon_v)
+            turn_angle = _calculate_turn_angle(bearing_in, bearing_out)
+            total_turn_angle += turn_angle
+            turn_count += 1
+
+    if successors:
+        for succ in successors:
+            lat_s = g.nodes[succ]["y"]
+            lon_s = g.nodes[succ]["x"]
+            bearing_in = _calculate_bearing(lat_u, lon_u, lat_v, lon_v)
+            bearing_out = _calculate_bearing(lat_v, lon_v, lat_s, lon_s)
+            turn_angle = _calculate_turn_angle(bearing_in, bearing_out)
+            total_turn_angle += turn_angle
+            turn_count += 1
+
+    avg_turn = total_turn_angle / turn_count if turn_count > 0 else 0.0
+    curvature_cost = avg_turn / 180.0
+
+    return curvature_cost
+
+def _prepare_graph_weights_with_curvature(g, mode="driving", curvature_weight=0.3):
+    """
+    curvature_weight: float between 0 and 1
+        0.0 = ignore curvature
+        1.0 = prioritize curvature equally with distance/time
+        0.3 = default: 30% curvature, 70% distance/time
+    """
+    for u, v, key, data in g.edges(keys=True, data=True):
+        if "length" not in data or data["length"] is None:
+            data["length"] = 0.0
+
+    if mode == "driving":
+        g = ox.routing.add_edge_speeds(g)
+        g = ox.routing.add_edge_travel_times(g)
+    else:
+        for _, _, _, data in g.edges(keys=True, data=True):
+            length_m = float(data.get("length", 0.0))
+            data["travel_time"] = length_m / WALKING_SPEED_M_PER_S if length_m > 0 else 0.0
+
+    for u, v, key, data in g.edges(keys=True, data=True):
+        curvature = _compute_edge_curvature(g, u, v)
+        data["curvature"] = curvature
+
+    for u, v, key, data in g.edges(keys=True, data=True):
+        base_weight = float(data.get("travel_time", data.get("length", 0.0)))
+        curvature_penalty = data.get("curvature", 0.0) * base_weight
+        data["hybrid_weight"] = (
+                (1.0 - curvature_weight) * base_weight +
+                curvature_weight * curvature_penalty
+        )
+
+    return g
 
 
 def _route_to_polyline(g, route_nodes: List[int]) -> List[Dict[str, float]]:
@@ -227,6 +312,8 @@ def calculate_route(
     mode="driving",
     osrm_base_url: str = OSRM_DEFAULT_BASE_URL,
     map_matching: bool = False,
+    use_curvature: bool = False,
+    curvature_weight: float = 0.3,
 ):
     try:
         origin_lat, origin_lon, dest_lat, dest_lon = _validate_coordinates(
@@ -236,11 +323,11 @@ def calculate_route(
         mode = "walking" if str(mode).lower() == "walking" else "driving"
 
         g = _get_graph(origin_lat, origin_lon, dest_lat, dest_lon, mode)
-        g = _prepare_graph_weights(g, mode)
+        g = _prepare_graph_weights(g, mode, use_curvature=use_curvature, curvature_weight=curvature_weight)
 
         origin_node, dest_node = _nearest_nodes(g, origin_lat, origin_lon, dest_lat, dest_lon)
 
-        weight = "travel_time" if mode == "driving" else "length"
+        weight = "hybrid_weight" if use_curvature else ("travel_time" if mode == "driving" else "length")
         route_nodes = nx.shortest_path(g, origin_node, dest_node, weight=weight)
 
         if not route_nodes or len(route_nodes) < 2:
