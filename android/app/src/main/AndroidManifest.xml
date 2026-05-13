@@ -3,7 +3,7 @@
 
     <application
         android:label="betterroads"
-        android:name="com.chaquo.python.android.PyApplication"
+        android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"

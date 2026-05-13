@@ -1,20 +1,7 @@
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-        maven { url = uri("https://chaquo.com/maven") }
-    }
-    dependencies {
-        classpath("com.android.tools.build:gradle:8.11.1")
-        classpath("com.chaquo.python:gradle:17.0.0")
-    }
-}
-
 allprojects {
     repositories {
         google()
         mavenCentral()
-        maven { url = uri("https://chaquo.com/maven") }
     }
 }
 
