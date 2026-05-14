@@ -9,6 +9,7 @@ import 'package:geolocator/geolocator.dart';
 import '../services/route_api_service.dart';
 import '../services/photon_service.dart';
 import '../models/location.dart';
+import '../widgets/route_info_panel.dart';
 
 typedef ComputeRouteCallback = Future<String> Function({
 required LatLng start,
@@ -57,6 +58,9 @@ class _MapScreenState extends State<MapScreen> {
   bool _hasSearchedStart = false;
   bool _hasSearchedDestination = false;
   bool _isLoadingLocation = false;
+  String _routeDistance = '';
+  String _routeDuration = '';
+  bool _hasRouteInfo = false;
   int _startSearchRequestId = 0;
   int _destinationSearchRequestId = 0;
   LatLng _selectedDestinationCoordinates = _defaultDestination;
@@ -320,6 +324,33 @@ class _MapScreenState extends State<MapScreen> {
       const Duration(milliseconds: 350),
           () => _searchDestination(query),
     );
+  }
+
+  void _parseRouteInfo(String response) {
+    try {
+      final decoded = jsonDecode(response);
+      if (decoded is Map<String, dynamic>) {
+        setState(() {
+          // adjust these keys based on the
+          _routeDistance = decoded['distance'] ?? decoded['summary']?['distance'] ?? 'Unknown';
+          _routeDuration = decoded['duration'] ?? decoded['summary']?['duration'] ?? 'Unknown';
+
+          // format if needed (e.g., convert meters to km, seconds to minutes)
+          if (_routeDistance is num) {
+            double distInKm = (_routeDistance as num) / 1000;
+            _routeDistance = '${distInKm.toStringAsFixed(1)} km';
+          }
+          if (_routeDuration is num) {
+            int minutes = (_routeDuration as num) ~/ 60;
+            _routeDuration = '$minutes min';
+          }
+
+          _hasRouteInfo = true;
+        });
+      }
+    } catch (e) {
+      print('Error parsing route info: $e');
+    }
   }
 
   Future<void> _searchDestination(String query) async {
@@ -618,6 +649,7 @@ class _MapScreenState extends State<MapScreen> {
         _isRouteStatusError = false;
       });
 
+      _parseRouteInfo(response);
       _fitRouteOnScreen(routePoints);
       _closeSearch(); // close panel and show route
 
@@ -1410,7 +1442,12 @@ class _MapScreenState extends State<MapScreen> {
               ],
             ),
             searchPanel,
-            // Hint text for map tap
+            if (_hasRouteInfo && _generatedRoutePoints.isNotEmpty)
+              RouteInfoPanel(
+                distanceText: _routeDistance,
+                durationText: _routeDuration,
+              ),
+            // hint text for map tap
             Positioned(
               bottom: 20,
               left: 20,
