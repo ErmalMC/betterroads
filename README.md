@@ -61,13 +61,19 @@ cd better-roads`
 
 ```
 lib/
+├── helpers/
+    ├── route_progress.dart       # Helper class for tracking progress
+├── models/
+    ├── location.dart             # Location data model
+    └── route_metrics.dart        # Distance/duration parsing
 ├── screens/
 │   └── map_screen.dart           # Main map UI with all logic
-├── widgets/
-│   └── route_info_panel.dart     # Bottom panel showing route stats
+├── 
 ├── services/
 │   ├── route_api_service.dart    # Backend API communication
 │   └── photon_service.dart       # Location search (OpenStreetMap)
-└── models/
-    ├── location.dart             # Location data model
-    └── route_metrics.dart        # Distance/duration parsing```
+└── widgets/
+    ├── route_info_panel.dart     # Bottom panel showing route stats
+    └── search_panel.dart         # Search panel with location suggestions.
+   ```
+
