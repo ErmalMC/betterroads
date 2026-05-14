@@ -8,6 +8,9 @@ A Flutter navigation app that finds the smoothest paths by balancing distance wi
 - The algorithm prefers straighter highways over winding local roads
 - Result: Far fewer turns, much smoother ride, slightly longer distance
 
+[View the demonstrative video.](https://drive.google.com/file/d/1sumzfV3SQMA57QywKXruDFFeJSWZNOOW/view)
+
+
 ## Features
 
 ### Smart Routing
