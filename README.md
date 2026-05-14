@@ -2,13 +2,14 @@
 
 A Flutter navigation app that finds the smoothest paths by balancing distance with road curvature. Perfect for motion sickness prevention, fuel efficiency, and comfortable driving.
 
+[View demonstrative video.](https://drive.google.com/file/d/1sumzfV3SQMA57QywKXruDFFeJSWZNOOW/view)
+
+
 **How it works:**
 - Each road segment gets a curvature score based on turn angles
 - Routes are weighted: 70% distance + 30% curvature penalty
 - The algorithm prefers straighter highways over winding local roads
 - Result: Far fewer turns, much smoother ride, slightly longer distance
-
-[View the demonstrative video.](https://drive.google.com/file/d/1sumzfV3SQMA57QywKXruDFFeJSWZNOOW/view)
 
 
 ## Features
@@ -50,7 +51,7 @@ A Flutter navigation app that finds the smoothest paths by balancing distance wi
 ### Setup
 
 1. **Clone the repository**
-`git clone https://github.com/yourusername/better-roads.git
+`git clone [https://github.com/yourusername/better-roads.git](https://github.com/ErmalMC/betterroads)
 cd better-roads`
 
 
