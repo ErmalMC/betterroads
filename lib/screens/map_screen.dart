@@ -1473,18 +1473,20 @@ class _MapScreenState extends State<MapScreen> {
         ),
         body: Stack(
           children: [
-            FlutterMap(
-              mapController: _mapController,
-              options: MapOptions(
-                initialCenter: _defaultStart,
-                initialZoom: 13,
-                minZoom: 3,
-                maxZoom: 18,
-                interactionOptions: const InteractionOptions(
-                  flags: InteractiveFlag.all,
+            IgnorePointer(
+              ignoring: _isComputingRoute,
+              child: FlutterMap(
+                mapController: _mapController,
+                options: MapOptions(
+                  initialCenter: _defaultStart,
+                  initialZoom: 13,
+                  minZoom: 3,
+                  maxZoom: 18,
+                  interactionOptions: const InteractionOptions(
+                    flags: InteractiveFlag.all,
+                  ),
+                  onTap: (_, point) => _handleMapTap(point),
                 ),
-                onTap: (_, point) => _handleMapTap(point),
-              ),
               children: [
                 TileLayer(
                   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -1552,7 +1554,8 @@ class _MapScreenState extends State<MapScreen> {
                     ],
                   ),
                 MarkerLayer(markers: markers),
-              ],
+               ],
+              ),
             ),
             searchPanel,
             // route info panel
