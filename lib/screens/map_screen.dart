@@ -1514,25 +1514,15 @@ class _MapScreenState extends State<MapScreen> {
               ],
             ),
             searchPanel,
-            if (!_hasRouteInfo || _isSearchOpen)
+            // route info panel
+            if (_hasRouteInfo && _generatedRoutePoints.isNotEmpty && !_isSearchOpen)
               Positioned(
-                bottom: 20,
-                left: 20,
-                right: 20,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.7),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    'Tap on map to select locations',
-                    style: TextStyle(color: Colors.white, fontSize: 11),
-                    textAlign: TextAlign.center,
-                  ),
+                top: 12,
+                left: 12,
+                right: 12,
+                child: RouteInfoPanel(
+                  distanceText: _routeDistance,
+                  durationText: _routeDuration,
                 ),
               ),
             //hint text for map tap
