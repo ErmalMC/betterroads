@@ -59,7 +59,7 @@ cd better-roads`
 
 ## Project Structure
 
-`
+```
 lib/
 ├── screens/
 │   └── map_screen.dart           # Main map UI with all logic
@@ -70,4 +70,4 @@ lib/
 │   └── photon_service.dart       # Location search (OpenStreetMap)
 └── models/
     ├── location.dart             # Location data model
-    └── route_metrics.dart        # Distance/duration parsing`
+    └── route_metrics.dart        # Distance/duration parsing```
