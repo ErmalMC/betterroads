@@ -11,9 +11,11 @@ class RouteApiService {
   })  : _baseUrl = baseUrl ?? _defaultBaseUrl,
         _client = client ?? http.Client();
 
+  // Default to the hosted route API. Can still be overridden via
+  // the ROUTE_API_BASE_URL environment variable when needed.
   static const String _defaultBaseUrl = String.fromEnvironment(
     'ROUTE_API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:5000',
+    defaultValue: 'https://least-curved-road.azurewebsites.net',
   );
 
   final String _baseUrl;
@@ -39,7 +41,8 @@ class RouteApiService {
       headers: const {'Content-Type': 'application/json'},
       body: jsonEncode(payload),
     )
-        .timeout(const Duration(seconds: 12));
+        // allow a bit more time for network requests to the remote API
+        .timeout(const Duration(seconds: 30));
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw TimeoutException(
