@@ -2,28 +2,27 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
-import 'package:betterroads/services/mapbox_places_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-
+import 'package:geolocator/geolocator.dart';
 import '../services/route_api_service.dart';
+import '../services/photon_service.dart';
+import '../models/location.dart';
 
 typedef ComputeRouteCallback =
-    Future<String> Function({
-      required LatLng start,
-      required LatLng destination,
-    });
+Future<String> Function({
+required LatLng start,
+required LatLng destination,
+});
 
 class MapScreen extends StatefulWidget {
   const MapScreen({
     super.key,
-    this.placesService,
     this.computeRoute,
     this.routeApiBaseUrl,
   });
 
-  final MapboxPlacesService? placesService;
   final ComputeRouteCallback? computeRoute;
   final String? routeApiBaseUrl;
 
@@ -37,20 +36,18 @@ class _MapScreenState extends State<MapScreen> {
 
   final MapController _mapController = MapController();
   final TextEditingController _startLocationController =
-      TextEditingController();
+  TextEditingController();
   final TextEditingController _destinationController = TextEditingController();
   final FocusNode _startLocationFocusNode = FocusNode();
   final FocusNode _destinationFocusNode = FocusNode();
 
-  late final MapboxPlacesService _placesService;
-  late final bool _ownsPlacesService;
   late final ComputeRouteCallback _computeRoute;
   late final RouteApiService _routeApiService;
 
   Timer? _startSearchDebounce;
   Timer? _destinationSearchDebounce;
-  List<PlaceSuggestion> _startSuggestions = const [];
-  List<PlaceSuggestion> _destinationSuggestions = const [];
+  List<Location> _startSuggestions = const [];
+  List<Location> _destinationSuggestions = const [];
   LatLng _selectedStartCoordinates = _defaultStart;
   String? _selectedStartLabel;
   String? _startSearchError;
@@ -59,6 +56,7 @@ class _MapScreenState extends State<MapScreen> {
   bool _isSearchingDestination = false;
   bool _hasSearchedStart = false;
   bool _hasSearchedDestination = false;
+  bool _isLoadingLocation = false;
   int _startSearchRequestId = 0;
   int _destinationSearchRequestId = 0;
   LatLng _selectedDestinationCoordinates = _defaultDestination;
@@ -87,12 +85,17 @@ class _MapScreenState extends State<MapScreen> {
         _destinationSuggestions.isEmpty;
   }
 
+  String _getDisplayName(Location location) {
+    // Use name if available, otherwise fall back to coordinate string
+    if (location.name.isNotEmpty && location.name != 'Unknown') {
+      return location.name;
+    }
+    return '${location.lat.toStringAsFixed(5)}, ${location.lon.toStringAsFixed(5)}';
+  }
+
   @override
   void initState() {
     super.initState();
-    _ownsPlacesService = widget.placesService == null;
-    _placesService =
-        widget.placesService ?? MapboxPlacesService(proximity: _defaultStart);
     _routeApiService = RouteApiService(baseUrl: widget.routeApiBaseUrl);
     _computeRoute = widget.computeRoute ?? _routeApiService.computeRoute;
   }
@@ -106,9 +109,6 @@ class _MapScreenState extends State<MapScreen> {
     _startLocationFocusNode.dispose();
     _destinationFocusNode.dispose();
     _mapController.dispose();
-    if (_ownsPlacesService) {
-      _placesService.dispose();
-    }
     _routeApiService.dispose();
     super.dispose();
   }
@@ -126,6 +126,15 @@ class _MapScreenState extends State<MapScreen> {
       _hasSearchedStart = false;
     });
 
+    if (query == 'Current Location') {
+      _startSearchRequestId++;
+      setState(() {
+        _isSearchingStart = false;
+        _startSuggestions = const [];
+      });
+      return;
+    }
+
     if (query.length < 3) {
       _startSearchRequestId++;
       setState(() {
@@ -137,7 +146,7 @@ class _MapScreenState extends State<MapScreen> {
 
     _startSearchDebounce = Timer(
       const Duration(milliseconds: 350),
-      () => _searchStartLocation(query),
+          () => _searchStartLocation(query),
     );
   }
 
@@ -150,28 +159,22 @@ class _MapScreenState extends State<MapScreen> {
     });
 
     try {
-      final suggestions = await _placesService.search(query, limit: 6);
+      print('Searching for: $query');
+
+      final locations = await PhotonService.searchLocations(query, locationBias: _hasSelectedStart ? _selectedStartCoordinates : null,);
+
+      print('Got ${locations.length} results');
+
       if (!mounted || requestId != _startSearchRequestId) {
         return;
       }
 
       setState(() {
-        _startSuggestions = suggestions;
+        _startSuggestions = locations;
         _isSearchingStart = false;
         _hasSearchedStart = true;
       });
-    } on MapboxPlacesException catch (error) {
-      if (!mounted || requestId != _startSearchRequestId) {
-        return;
-      }
-
-      setState(() {
-        _startSuggestions = const [];
-        _isSearchingStart = false;
-        _hasSearchedStart = true;
-        _startSearchError = error.message;
-      });
-    } catch (_) {
+    } catch (error) {
       if (!mounted || requestId != _startSearchRequestId) {
         return;
       }
@@ -185,19 +188,22 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  void _selectStartLocation(PlaceSuggestion suggestion) {
+  void _selectStartLocation(Location location) {
     _startSearchDebounce?.cancel();
     _startSearchRequestId++;
 
+    final selectedPoint = LatLng(location.lat, location.lon);
+    final displayName = _getDisplayName(location);
+
     setState(() {
-      _selectedStartCoordinates = suggestion.coordinates;
-      _selectedStartLabel = suggestion.placeName;
+      _selectedStartCoordinates = selectedPoint;
+      _selectedStartLabel = displayName;
       _hasSelectedStart = true;
       _routeStatusMessage = null;
       _generatedRoutePoints = const [];
-      _startLocationController.text = suggestion.placeName;
+      _startLocationController.text = displayName;
       _startLocationController.selection = TextSelection.collapsed(
-        offset: suggestion.placeName.length,
+        offset: displayName.length,
       );
       _startSuggestions = const [];
       _startSearchError = null;
@@ -206,7 +212,7 @@ class _MapScreenState extends State<MapScreen> {
     });
 
     _startLocationFocusNode.unfocus();
-    _mapController.move(suggestion.coordinates, math.max(_currentZoom(), 14));
+    _mapController.move(selectedPoint, math.max(_currentZoom(), 14));
   }
 
   void _clearStartLocation() {
@@ -267,7 +273,7 @@ class _MapScreenState extends State<MapScreen> {
 
     _destinationSearchDebounce = Timer(
       const Duration(milliseconds: 350),
-      () => _searchDestination(query),
+          () => _searchDestination(query),
     );
   }
 
@@ -280,28 +286,17 @@ class _MapScreenState extends State<MapScreen> {
     });
 
     try {
-      final suggestions = await _placesService.search(query, limit: 6);
+      final locations = await PhotonService.searchLocations(query);
       if (!mounted || requestId != _destinationSearchRequestId) {
         return;
       }
 
       setState(() {
-        _destinationSuggestions = suggestions;
+        _destinationSuggestions = locations;
         _isSearchingDestination = false;
         _hasSearchedDestination = true;
       });
-    } on MapboxPlacesException catch (error) {
-      if (!mounted || requestId != _destinationSearchRequestId) {
-        return;
-      }
-
-      setState(() {
-        _destinationSuggestions = const [];
-        _isSearchingDestination = false;
-        _hasSearchedDestination = true;
-        _destinationSearchError = error.message;
-      });
-    } catch (_) {
+    } catch (error) {
       if (!mounted || requestId != _destinationSearchRequestId) {
         return;
       }
@@ -315,19 +310,22 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  void _selectDestination(PlaceSuggestion suggestion) {
+  void _selectDestination(Location location) {
     _destinationSearchDebounce?.cancel();
     _destinationSearchRequestId++;
 
+    final selectedPoint = LatLng(location.lat, location.lon);
+    final displayName = _getDisplayName(location);
+
     setState(() {
-      _selectedDestinationCoordinates = suggestion.coordinates;
-      _selectedDestinationLabel = suggestion.placeName;
+      _selectedDestinationCoordinates = selectedPoint;
+      _selectedDestinationLabel = displayName;
       _hasSelectedDestination = true;
       _routeStatusMessage = null;
       _generatedRoutePoints = const [];
-      _destinationController.text = suggestion.placeName;
+      _destinationController.text = displayName;
       _destinationController.selection = TextSelection.collapsed(
-        offset: suggestion.placeName.length,
+        offset: displayName.length,
       );
       _destinationSuggestions = const [];
       _destinationSearchError = null;
@@ -336,7 +334,7 @@ class _MapScreenState extends State<MapScreen> {
     });
 
     _destinationFocusNode.unfocus();
-    _mapController.move(suggestion.coordinates, math.max(_currentZoom(), 14));
+    _mapController.move(selectedPoint, math.max(_currentZoom(), 14));
   }
 
   void _clearDestination() {
@@ -387,6 +385,69 @@ class _MapScreenState extends State<MapScreen> {
       _destinationSearchError = null;
     });
   }
+  Future<void> _getCurrentLocation() async {
+    setState(() {
+      _isLoadingLocation = true;
+    });
+
+    try {
+      // 1. Check if location services are enabled (GPS is on)
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        // In a real app, you'd show a dialog here.
+        print('Location services are disabled.');
+        setState(() => _isLoadingLocation = false);
+        return;
+      }
+
+      // 2. Check and request permissions
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          print('Location permissions are denied.');
+          setState(() => _isLoadingLocation = false);
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        print('Location permissions are permanently denied.');
+        setState(() => _isLoadingLocation = false);
+        return;
+      }
+
+      // 3. Get the current position with high accuracy
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      print('Current position: ${position.latitude}, ${position.longitude}');
+
+      // 4. Update your map's state with the new location
+      final currentLatLng = LatLng(position.latitude, position.longitude);
+
+      // Update the selected start location to the user's current location
+      setState(() {
+        _selectedStartCoordinates = currentLatLng;
+        _selectedStartLabel = 'Current Location';
+        _hasSelectedStart = true;
+        _startLocationController.text = 'Current Location';
+        _startSuggestions = const []; // Clear any suggestions
+      });
+
+      // Move the map camera to the user's location
+      _mapController.move(currentLatLng, _currentZoom());
+
+    } catch (e) {
+      print('Error getting location: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingLocation = false;
+        });
+      }
+    }
+  }
 
   void _handleMapTap(LatLng point) {
     setState(() {
@@ -399,7 +460,7 @@ class _MapScreenState extends State<MapScreen> {
         _hasSelectedStart = true;
         _hasSelectedDestination = false;
         _startLocationController.text =
-            '${point.latitude.toStringAsFixed(5)}, ${point.longitude.toStringAsFixed(5)}';
+        '${point.latitude.toStringAsFixed(5)}, ${point.longitude.toStringAsFixed(5)}';
         _destinationController.clear();
         return;
       }
@@ -408,7 +469,7 @@ class _MapScreenState extends State<MapScreen> {
       _selectedDestinationLabel = 'Selected on map';
       _hasSelectedDestination = true;
       _destinationController.text =
-          '${point.latitude.toStringAsFixed(5)}, ${point.longitude.toStringAsFixed(5)}';
+      '${point.latitude.toStringAsFixed(5)}, ${point.longitude.toStringAsFixed(5)}';
     });
   }
 
@@ -704,8 +765,46 @@ class _MapScreenState extends State<MapScreen> {
                     border: OutlineInputBorder(),
                   ),
                   textInputAction: TextInputAction.next,
+                  onChanged: _onStartLocationChanged,
                   onSubmitted: _handleStartSubmitted,
                 ),
+                if (_showNoResults)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 4),
+                    child: Text(
+                      'No results found',
+                      style: TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                  ),
+                if (_startSuggestions.isNotEmpty)
+                  Container(
+                    margin: const EdgeInsets.only(top: 4),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(4),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: _startSuggestions.length,
+                      itemBuilder: (context, index) {
+                        final location = _startSuggestions[index];
+                        return ListTile(
+                          title: Text(_getDisplayName(location)),
+                          subtitle: Text(
+                            '${location.lat.toStringAsFixed(4)}, ${location.lon.toStringAsFixed(4)}',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          onTap: () => _selectStartLocation(location),
+                        );
+                      },
+                    ),
+                  ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: _destinationController,
@@ -715,8 +814,46 @@ class _MapScreenState extends State<MapScreen> {
                     border: OutlineInputBorder(),
                   ),
                   textInputAction: TextInputAction.done,
+                  onChanged: _onDestinationChanged,
                   onSubmitted: _handleEndSubmitted,
                 ),
+                if (_showDestinationNoResults)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 4),
+                    child: Text(
+                      'No results found',
+                      style: TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                  ),
+                if (_destinationSuggestions.isNotEmpty)
+                  Container(
+                    margin: const EdgeInsets.only(top: 4),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(4),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: _destinationSuggestions.length,
+                      itemBuilder: (context, index) {
+                        final location = _destinationSuggestions[index];
+                        return ListTile(
+                          title: Text(_getDisplayName(location)),
+                          subtitle: Text(
+                            '${location.lat.toStringAsFixed(4)}, ${location.lon.toStringAsFixed(4)}',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          onTap: () => _selectDestination(location),
+                        );
+                      },
+                    ),
+                  ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -725,10 +862,10 @@ class _MapScreenState extends State<MapScreen> {
                         onPressed: _isComputingRoute ? null : _requestRoute,
                         child: _isComputingRoute
                             ? const SizedBox(
-                                height: 16,
-                                width: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                             : const Text('Generate route'),
                       ),
                     ),
@@ -769,10 +906,27 @@ class _MapScreenState extends State<MapScreen> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('Better Roads'),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _toggleSearch,
-        tooltip: _isSearchOpen ? 'Close search' : 'Open search',
-        child: Icon(_isSearchOpen ? Icons.close : Icons.search),
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton(
+            onPressed: _toggleSearch,
+            tooltip: _isSearchOpen ? 'Close search' : 'Open search',
+            child: Icon(_isSearchOpen ? Icons.close : Icons.search),
+          ),
+          const SizedBox(height: 16),
+          FloatingActionButton(
+            onPressed: _isLoadingLocation ? null : _getCurrentLocation,
+            tooltip: 'My Location',
+            child: _isLoadingLocation
+                ? const SizedBox(
+              height: 24,
+              width: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+                : const Icon(Icons.my_location),
+          ),
+        ],
       ),
       body: Stack(
         children: [
@@ -826,4 +980,3 @@ class _RouteResponseException implements Exception {
 
   final String message;
 }
-
