@@ -58,6 +58,7 @@ class _MapScreenState extends State<MapScreen> {
   bool _isLoadingLocation = false;
   String _routeDistance = '';
   String _routeDuration = '';
+  String _routeMode = 'driving'; // 'driving' or 'walking'
   bool _hasRouteInfo = false;
   int _startSearchRequestId = 0;
   int _destinationSearchRequestId = 0;
@@ -311,6 +312,13 @@ class _MapScreenState extends State<MapScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
+  }
+
+  void _toggleRouteMode() {
+    setState(() {
+      _routeMode = _routeMode == 'driving' ? 'walking' : 'driving';
+    });
+    _requestRoute(); // recalculate with new mode
   }
 
   void _onDestinationChanged(String value) {
@@ -678,6 +686,7 @@ class _MapScreenState extends State<MapScreen> {
       final response = await _computeRoute(
         start: _selectedStartCoordinates,
         destination: _selectedDestinationCoordinates,
+        mode: _routeMode,
       );
       final routePoints = _parseRouteResponse(response);
       if (!mounted) {
