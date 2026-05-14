@@ -1363,32 +1363,34 @@ class _MapScreenState extends State<MapScreen> {
     );
 
     final markers = <Marker>[
-      Marker(
-        point: _selectedStartCoordinates,
-        width: 50,
-        height: 50,
-        child: const Icon(
-          Icons.location_on,
-          color: Colors.green,
-          size: 42,
-          shadows: [
-            Shadow(offset: Offset(0, 1), blurRadius: 2, color: Colors.black26),
-          ],
+      if (_hasSelectedStart)
+        Marker(
+          point: _selectedStartCoordinates,
+          width: 50,
+          height: 50,
+          child: const Icon(
+            Icons.location_on,
+            color: Colors.green,
+            size: 42,
+            shadows: [
+              Shadow(offset: Offset(0, 1), blurRadius: 2, color: Colors.black26),
+            ],
+          ),
         ),
-      ),
-      Marker(
-        point: _selectedDestinationCoordinates,
-        width: 50,
-        height: 50,
-        child: const Icon(
-          Icons.flag,
-          color: Colors.red,
-          size: 36,
-          shadows: [
-            Shadow(offset: Offset(0, 1), blurRadius: 2, color: Colors.black26),
-          ],
+      if (_hasSelectedDestination)
+        Marker(
+          point: _selectedDestinationCoordinates,
+          width: 50,
+          height: 50,
+          child: const Icon(
+            Icons.flag,
+            color: Colors.red,
+            size: 36,
+            shadows: [
+              Shadow(offset: Offset(0, 1), blurRadius: 2, color: Colors.black26),
+            ],
+          ),
         ),
-      ),
     ];
 
     return Theme(
