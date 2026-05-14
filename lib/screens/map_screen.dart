@@ -101,6 +101,10 @@ class _MapScreenState extends State<MapScreen> {
     super.initState();
     _routeApiService = RouteApiService(baseUrl: widget.routeApiBaseUrl);
     _computeRoute = widget.computeRoute ?? _routeApiService.computeRoute;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _getAndRecenterToCurrentLocation();
+    });
   }
 
   @override
