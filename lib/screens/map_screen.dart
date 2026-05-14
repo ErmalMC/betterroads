@@ -86,7 +86,6 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   String _getDisplayName(Location location) {
-    // Use name if available, otherwise fall back to coordinate string
     if (location.name.isNotEmpty && location.name != 'Unknown') {
       return location.name;
     }
@@ -237,47 +236,44 @@ class _MapScreenState extends State<MapScreen> {
   void _swapStartAndDestination() {
     if (!_hasSelectedStart || !_hasSelectedDestination) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select both start and destination first'),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: const Text('Please select both start and destination first'),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
       return;
     }
 
     setState(() {
-      // swap coordinates
       final tempCoordinates = _selectedStartCoordinates;
       _selectedStartCoordinates = _selectedDestinationCoordinates;
       _selectedDestinationCoordinates = tempCoordinates;
 
-      // swap labels
       final tempLabel = _selectedStartLabel;
       _selectedStartLabel = _selectedDestinationLabel;
       _selectedDestinationLabel = tempLabel;
 
-      // swap text field values
       final tempText = _startLocationController.text;
       _startLocationController.text = _destinationController.text;
       _destinationController.text = tempText;
 
-      // clear route since points changed
       _routeStatusMessage = null;
       _generatedRoutePoints = const [];
 
-      // keep both as selected
       _hasSelectedStart = true;
       _hasSelectedDestination = true;
     });
 
-    // move map to show both points or just the new start
     _mapController.move(_selectedStartCoordinates, _currentZoom());
 
-    // show confirmation
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Start and destination swapped'),
-        duration: Duration(seconds: 1),
+      SnackBar(
+        content: const Text('Start and destination swapped'),
+        duration: const Duration(seconds: 1),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
@@ -436,7 +432,6 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
-  // Combined method: gets current location AND recenters map to it
   Future<void> _getAndRecenterToCurrentLocation() async {
     if (_isLoadingLocation) return;
 
@@ -445,20 +440,22 @@ class _MapScreenState extends State<MapScreen> {
     });
 
     try {
-      // Check if location services are enabled
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         print('Location services are disabled.');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please enable location services')),
+            SnackBar(
+              content: const Text('Please enable location services'),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
           );
         }
         setState(() => _isLoadingLocation = false);
         return;
       }
 
-      // Check and request permissions
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
@@ -466,7 +463,11 @@ class _MapScreenState extends State<MapScreen> {
           print('Location permissions are denied.');
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Location permission denied')),
+              SnackBar(
+                content: const Text('Location permission denied'),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
             );
           }
           setState(() => _isLoadingLocation = false);
@@ -478,14 +479,17 @@ class _MapScreenState extends State<MapScreen> {
         print('Location permissions are permanently denied.');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Location permission permanently denied')),
+            SnackBar(
+              content: const Text('Location permission permanently denied'),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
           );
         }
         setState(() => _isLoadingLocation = false);
         return;
       }
 
-      // Get the current position
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
@@ -498,14 +502,17 @@ class _MapScreenState extends State<MapScreen> {
         _isLoadingLocation = false;
       });
 
-      // Recenter the map to the user's location
       _mapController.move(currentLatLng, _currentZoom());
 
     } catch (e) {
       print('Error getting location: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error getting location: $e')),
+          SnackBar(
+            content: Text('Error getting location: $e'),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
         );
       }
       setState(() {
@@ -532,18 +539,21 @@ class _MapScreenState extends State<MapScreen> {
       _startLocationFocusNode.unfocus();
       _mapController.move(_userCurrentLocation!, math.max(_currentZoom(), 14));
 
-      // Show a snackbar to confirm
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Starting point set to your current location'),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: const Text('Starting point set to your current location'),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Unable to get current location. Please tap the location button first.'),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: const Text('Unable to get current location. Please tap the location button first.'),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
     }
@@ -605,7 +615,7 @@ class _MapScreenState extends State<MapScreen> {
 
       setState(() {
         _generatedRoutePoints = routePoints;
-        _routeStatusMessage = 'Route generated.';
+        _routeStatusMessage = 'Route generated successfully!';
         _isRouteStatusError = false;
       });
     } on _RouteResponseException catch (error) {
@@ -818,187 +828,372 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final lightBlueTheme = Theme.of(context).copyWith(
+      primaryColor: const Color(0xFF4A90E2),
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: const Color(0xFF4A90E2),
+        primary: const Color(0xFF4A90E2),
+        secondary: const Color(0xFF7AB8F5),
+        surface: Colors.white,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade200),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF4A90E2), width: 2),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF4A90E2),
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+    );
+
     final searchPanel = AnimatedPositioned(
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOut,
-      left: 0,
-      right: 0,
-      top: _isSearchOpen ? 0 : -420,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+      left: 12,
+      right: 12,
+      top: _isSearchOpen ? 12 : -500,
       child: Material(
-        elevation: 4,
-        color: Theme.of(context).colorScheme.surface,
+        elevation: 8,
+        borderRadius: BorderRadius.circular(20),
+        color: Colors.white,
         child: SafeArea(
           bottom: false,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Search locations',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    Row(
-                      children: [
-                        TextButton(
-                          onPressed: _clearSearch,
-                          child: const Text('Clear'),
-                        ),
-                        IconButton(
-                          tooltip: 'Close search',
-                          onPressed: _closeSearch,
-                          icon: const Icon(Icons.close),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _startLocationController,
-                  decoration: const InputDecoration(
-                    labelText: 'Start location',
-                    prefixIcon: Icon(Icons.trip_origin),
-                    border: OutlineInputBorder(),
-                  ),
-                  textInputAction: TextInputAction.next,
-                  onChanged: _onStartLocationChanged,
-                  onSubmitted: _handleStartSubmitted,
-                ),
-                if (_showNoResults)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 4),
-                    child: Text(
-                      'No results found',
-                      style: TextStyle(color: Colors.grey, fontSize: 12),
-                    ),
-                  ),
-                if (_startSuggestions.isNotEmpty)
-                  Container(
-                    margin: const EdgeInsets.only(top: 4),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(4),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 4,
-                        ),
-                      ],
-                    ),
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: _startSuggestions.length,
-                      itemBuilder: (context, index) {
-                        final location = _startSuggestions[index];
-                        return ListTile(
-                          title: Text(_getDisplayName(location)),
-                          subtitle: Text(
-                            '${location.lat.toStringAsFixed(4)}, ${location.lon.toStringAsFixed(4)}',
-                            style: const TextStyle(fontSize: 12),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 4,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF4A90E2),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
                           ),
-                          onTap: () => _selectStartLocation(location),
-                        );
-                      },
-                    ),
-                  ),
-                // Button to set current location as starting point
-                if (_userCurrentLocation != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: OutlinedButton.icon(
-                      onPressed: _setStartToCurrentLocation,
-                      icon: const Icon(Icons.my_location, size: 18),
-                      label: const Text('Use current location as starting point'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.green,
-                        side: const BorderSide(color: Colors.green),
-                      ),
-                    ),
-                  ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _destinationController,
-                  decoration: const InputDecoration(
-                    labelText: 'Destination',
-                    prefixIcon: Icon(Icons.flag),
-                    border: OutlineInputBorder(),
-                  ),
-                  textInputAction: TextInputAction.done,
-                  onChanged: _onDestinationChanged,
-                  onSubmitted: _handleEndSubmitted,
-                ),
-                if (_showDestinationNoResults)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 4),
-                    child: Text(
-                      'No results found',
-                      style: TextStyle(color: Colors.grey, fontSize: 12),
-                    ),
-                  ),
-                if (_destinationSuggestions.isNotEmpty)
-                  Container(
-                    margin: const EdgeInsets.only(top: 4),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(4),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 4,
-                        ),
-                      ],
-                    ),
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: _destinationSuggestions.length,
-                      itemBuilder: (context, index) {
-                        final location = _destinationSuggestions[index];
-                        return ListTile(
-                          title: Text(_getDisplayName(location)),
-                          subtitle: Text(
-                            '${location.lat.toStringAsFixed(4)}, ${location.lon.toStringAsFixed(4)}',
-                            style: const TextStyle(fontSize: 12),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Plan your route',
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF2C3E50),
+                            ),
                           ),
-                          onTap: () => _selectDestination(location),
-                        );
-                      },
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          TextButton(
+                            onPressed: _clearSearch,
+                            style: TextButton.styleFrom(
+                              foregroundColor: const Color(0xFF4A90E2),
+                            ),
+                            child: const Text('Clear all'),
+                          ),
+                          const SizedBox(width: 4),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              shape: BoxShape.circle,
+                            ),
+                            child: IconButton(
+                              tooltip: 'Close search',
+                              onPressed: _closeSearch,
+                              icon: const Icon(Icons.close, size: 20),
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  // Start Location Field
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: TextField(
+                      controller: _startLocationController,
+                      decoration: InputDecoration(
+                        labelText: 'Start location',
+                        labelStyle: TextStyle(color: Colors.grey.shade600),
+                        prefixIcon: const Icon(Icons.trip_origin, color: Color(0xFF4A90E2), size: 22),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      ),
+                      textInputAction: TextInputAction.next,
+                      onChanged: _onStartLocationChanged,
+                      onSubmitted: _handleStartSubmitted,
                     ),
                   ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: _isComputingRoute ? null : _requestRoute,
-                        child: _isComputingRoute
-                            ? const SizedBox(
-                          height: 16,
-                          width: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                            : const Text('Generate route'),
+                  if (_showNoResults)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        'No results found',
+                        style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
                       ),
                     ),
-                    Center(
-                      child: IconButton(
-                        onPressed: (_hasSelectedStart && _hasSelectedDestination)
-                            ? _swapStartAndDestination
-                            : null,
-                        icon: const Icon(Icons.swap_vert, size: 32),
-                        tooltip: 'Swap start and destination',
-                        color: (_hasSelectedStart && _hasSelectedDestination)
-                            ? Theme.of(context).primaryColor
-                            : Colors.grey,
+                  if (_startSuggestions.isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.only(top: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _startSuggestions.length,
+                        itemBuilder: (context, index) {
+                          final location = _startSuggestions[index];
+                          return InkWell(
+                            onTap: () => _selectStartLocation(location),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _getDisplayName(location),
+                                    style: const TextStyle(fontWeight: FontWeight.w500),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${location.lat.toStringAsFixed(4)}, ${location.lon.toStringAsFixed(4)}',
+                                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ),
-                    const SizedBox(height: 12),
-                  ],
-                ),
-              ],
+                  if (_userCurrentLocation != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: OutlinedButton.icon(
+                        onPressed: _setStartToCurrentLocation,
+                        icon: const Icon(Icons.my_location, size: 18),
+                        label: const Text('Use my current location'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF4A90E2),
+                          side: const BorderSide(color: Color(0xFF4A90E2)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 20),
+                  // Destination Field
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: TextField(
+                      controller: _destinationController,
+                      decoration: InputDecoration(
+                        labelText: 'Destination',
+                        labelStyle: TextStyle(color: Colors.grey.shade600),
+                        prefixIcon: const Icon(Icons.flag, color: Color(0xFFE74C3C), size: 22),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      ),
+                      textInputAction: TextInputAction.done,
+                      onChanged: _onDestinationChanged,
+                      onSubmitted: _handleEndSubmitted,
+                    ),
+                  ),
+                  if (_showDestinationNoResults)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        'No results found',
+                        style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                      ),
+                    ),
+                  if (_destinationSuggestions.isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.only(top: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _destinationSuggestions.length,
+                        itemBuilder: (context, index) {
+                          final location = _destinationSuggestions[index];
+                          return InkWell(
+                            onTap: () => _selectDestination(location),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _getDisplayName(location),
+                                    style: const TextStyle(fontWeight: FontWeight.w500),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${location.lat.toStringAsFixed(4)}, ${location.lon.toStringAsFixed(4)}',
+                                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  const SizedBox(height: 20),
+                  // Generate Route Button with Swap button next to it
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 4,
+                        child: ElevatedButton(
+                          onPressed: _isComputingRoute ? null : _requestRoute,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF4A90E2),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: _isComputingRoute
+                              ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                              : const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.route, size: 20),
+                              SizedBox(width: 8),
+                              Text('Generate route', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: (_hasSelectedStart && _hasSelectedDestination)
+                              ? const Color(0xFF4A90E2).withValues(alpha: 0.1)
+                              : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: (_hasSelectedStart && _hasSelectedDestination)
+                                ? const Color(0xFF4A90E2).withValues(alpha: 0.3)
+                                : Colors.grey.shade200,
+                          ),
+                        ),
+                        child: IconButton(
+                          onPressed: (_hasSelectedStart && _hasSelectedDestination)
+                              ? _swapStartAndDestination
+                              : null,
+                          icon: const Icon(Icons.swap_horiz, size: 24),
+                          tooltip: 'Swap start and destination',
+                          color: (_hasSelectedStart && _hasSelectedDestination)
+                              ? const Color(0xFF4A90E2)
+                              : Colors.grey.shade400,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_routeStatusMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: _isRouteStatusError
+                              ? Colors.red.shade50
+                              : Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: _isRouteStatusError
+                                ? Colors.red.shade200
+                                : Colors.green.shade200,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              _isRouteStatusError ? Icons.error_outline : Icons.check_circle_outline,
+                              color: _isRouteStatusError ? Colors.red : Colors.green,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _routeStatusMessage!,
+                                style: TextStyle(
+                                  color: _isRouteStatusError ? Colors.red.shade700 : Colors.green.shade700,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -1008,137 +1203,213 @@ class _MapScreenState extends State<MapScreen> {
     final markers = <Marker>[
       Marker(
         point: _selectedStartCoordinates,
-        width: 40,
-        height: 40,
+        width: 50,
+        height: 50,
         child: const Icon(
           Icons.location_on,
           color: Colors.green,
-          size: 36,
+          size: 42,
+          shadows: [
+            Shadow(offset: Offset(0, 1), blurRadius: 2, color: Colors.black26)
+          ],
         ),
       ),
       Marker(
         point: _selectedDestinationCoordinates,
-        width: 40,
-        height: 40,
+        width: 50,
+        height: 50,
         child: const Icon(
           Icons.flag,
           color: Colors.red,
-          size: 30,
+          size: 36,
+          shadows: [
+            Shadow(offset: Offset(0, 1), blurRadius: 2, color: Colors.black26)
+          ],
         ),
       ),
     ];
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('Better Roads'),
-      ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton(
-            onPressed: _toggleSearch,
-            tooltip: _isSearchOpen ? 'Close search' : 'Open search',
-            child: Icon(_isSearchOpen ? Icons.close : Icons.search),
-          ),
-          const SizedBox(height: 16),
-          FloatingActionButton(
-            onPressed: _isLoadingLocation ? null : _getAndRecenterToCurrentLocation,
-            tooltip: 'Get my location and recenter',
-            child: _isLoadingLocation
-                ? const SizedBox(
-              height: 24,
-              width: 24,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-                : const Icon(Icons.my_location),
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          FlutterMap(
-            mapController: _mapController,
-            options: MapOptions(
-              initialCenter: _defaultStart,
-              initialZoom: 13,
-              minZoom: 3,
-              maxZoom: 18,
-              interactionOptions: const InteractionOptions(
-                flags: InteractiveFlag.all,
-              ),
-              onTap: (_, point) => _handleMapTap(point),
+    return Theme(
+      data: lightBlueTheme,
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          title: const Text(
+            'Better Roads',
+            style: TextStyle(
+              color: const Color(0xFF2C3E50),
+              fontWeight: FontWeight.bold,
+              fontSize: 24,
             ),
-            children: [
-              TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'betterroads',
-              ),
-              if (_userCurrentLocation != null)
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: _userCurrentLocation!,
-                      width: 80,
-                      height: 80,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          // Pulsing outer circle
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.blue.withValues(alpha: 0.2),
-                            ),
-                          ),
-                          // Inner dot
-                          Container(
-                            width: 16,
-                            height: 16,
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.blue,
-                            ),
-                          ),
-                          // Center white dot
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              if (_generatedRoutePoints.isNotEmpty)
-                PolylineLayer(
-                  key: const Key('route-polyline-layer'),
-                  polylines: [
-                    Polyline(
-                      points: _generatedRoutePoints,
-                      color: Colors.black.withValues(alpha: 0.8),
-                      strokeWidth: 8,
-                    ),
-                    Polyline(
-                      points: _generatedRoutePoints,
-                      color: Colors.yellowAccent,
-                      strokeWidth: 5,
-                    ),
-                  ],
-                ),
-              MarkerLayer(
-                markers: markers,
-              ),
-            ],
           ),
-          searchPanel,
-        ],
+          centerTitle: true,
+          actions: [
+            IconButton(
+              onPressed: _clearSearch,
+              icon: const Icon(Icons.clear_all),
+              tooltip: 'Clear all',
+              color: const Color(0xFF4A90E2),
+            ),
+          ],
+        ),
+        floatingActionButton: Column(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: FloatingActionButton(
+                onPressed: _toggleSearch,
+                tooltip: _isSearchOpen ? 'Close search' : 'Open search',
+                backgroundColor: _isSearchOpen ? Colors.grey.shade700 : const Color(0xFF4A90E2),
+                child: Icon(_isSearchOpen ? Icons.close : Icons.search),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: FloatingActionButton(
+                onPressed: _isLoadingLocation ? null : _getAndRecenterToCurrentLocation,
+                tooltip: 'Get my location',
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFF4A90E2),
+                child: _isLoadingLocation
+                    ? const SizedBox(
+                  height: 24,
+                  width: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4A90E2)),
+                  ),
+                )
+                    : const Icon(Icons.my_location),
+              ),
+            ),
+          ],
+        ),
+        body: Stack(
+          children: [
+            FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: _defaultStart,
+                initialZoom: 13,
+                minZoom: 3,
+                maxZoom: 18,
+                interactionOptions: const InteractionOptions(
+                  flags: InteractiveFlag.all,
+                ),
+                onTap: (_, point) => _handleMapTap(point),
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'betterroads',
+                ),
+                if (_userCurrentLocation != null)
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: _userCurrentLocation!,
+                        width: 80,
+                        height: 80,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            AnimatedOpacity(
+                              opacity: 0.5,
+                              duration: const Duration(seconds: 1),
+                              child: Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: const Color(0xFF4A90E2).withValues(alpha: 0.3),
+                                ),
+                              ),
+                            ),
+                            Container(
+                              width: 16,
+                              height: 16,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Color(0xFF4A90E2),
+                              ),
+                            ),
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                if (_generatedRoutePoints.isNotEmpty)
+                  PolylineLayer(
+                    key: const Key('route-polyline-layer'),
+                    polylines: [
+                      Polyline(
+                        points: _generatedRoutePoints,
+                        color: const Color(0xFF4A90E2).withValues(alpha: 0.4),
+                        strokeWidth: 10,
+                      ),
+                      Polyline(
+                        points: _generatedRoutePoints,
+                        color: const Color(0xFF4A90E2),
+                        strokeWidth: 5,
+                      ),
+                    ],
+                  ),
+                MarkerLayer(
+                  markers: markers,
+                ),
+              ],
+            ),
+            searchPanel,
+            // Hint text for map tap
+            Positioned(
+              bottom: 20,
+              left: 20,
+              right: 20,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.7),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  'Tap on map to select locations',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
