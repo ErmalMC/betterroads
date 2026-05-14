@@ -10,8 +10,7 @@ import '../services/route_api_service.dart';
 import '../services/photon_service.dart';
 import '../models/location.dart';
 
-typedef ComputeRouteCallback =
-Future<String> Function({
+typedef ComputeRouteCallback = Future<String> Function({
 required LatLng start,
 required LatLng destination,
 });
@@ -44,6 +43,7 @@ class _MapScreenState extends State<MapScreen> {
   late final ComputeRouteCallback _computeRoute;
   late final RouteApiService _routeApiService;
   LatLng? _userCurrentLocation;
+  LatLng? _searchBiasLocation;
   Timer? _startSearchDebounce;
   Timer? _destinationSearchDebounce;
   List<Location> _startSuggestions = const [];
@@ -161,7 +161,8 @@ class _MapScreenState extends State<MapScreen> {
     try {
       print('Searching for: $query');
 
-      final locations = await PhotonService.searchLocations(query,locationBias:  _userCurrentLocation,);
+      final locations = await PhotonService.searchLocations(query,
+          locationBias: _userCurrentLocation);
 
       print('Got ${locations.length} results');
 
@@ -193,7 +194,6 @@ class _MapScreenState extends State<MapScreen> {
     _startSearchRequestId++;
 
     final selectedPoint = LatLng(location.lat, location.lon);
-    _userCurrentLocation = selectedPoint;
     final displayName = _getDisplayName(location);
 
     setState(() {
@@ -232,6 +232,54 @@ class _MapScreenState extends State<MapScreen> {
       _hasSearchedStart = false;
       _isSearchingStart = false;
     });
+  }
+
+  void _swapStartAndDestination() {
+    if (!_hasSelectedStart || !_hasSelectedDestination) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select both start and destination first'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      // swap coordinates
+      final tempCoordinates = _selectedStartCoordinates;
+      _selectedStartCoordinates = _selectedDestinationCoordinates;
+      _selectedDestinationCoordinates = tempCoordinates;
+
+      // swap labels
+      final tempLabel = _selectedStartLabel;
+      _selectedStartLabel = _selectedDestinationLabel;
+      _selectedDestinationLabel = tempLabel;
+
+      // swap text field values
+      final tempText = _startLocationController.text;
+      _startLocationController.text = _destinationController.text;
+      _destinationController.text = tempText;
+
+      // clear route since points changed
+      _routeStatusMessage = null;
+      _generatedRoutePoints = const [];
+
+      // keep both as selected
+      _hasSelectedStart = true;
+      _hasSelectedDestination = true;
+    });
+
+    // move map to show both points or just the new start
+    _mapController.move(_selectedStartCoordinates, _currentZoom());
+
+    // show confirmation
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Start and destination swapped'),
+        duration: Duration(seconds: 1),
+      ),
+    );
   }
 
   void _onDestinationChanged(String value) {
@@ -287,7 +335,8 @@ class _MapScreenState extends State<MapScreen> {
     });
 
     try {
-      final locations = await PhotonService.searchLocations(query, locationBias: _userCurrentLocation);
+      final locations = await PhotonService.searchLocations(query,
+          locationBias: _userCurrentLocation);
       if (!mounted || requestId != _destinationSearchRequestId) {
         return;
       }
@@ -386,27 +435,40 @@ class _MapScreenState extends State<MapScreen> {
       _destinationSearchError = null;
     });
   }
-  Future<void> _getCurrentLocation() async {
+
+  // Combined method: gets current location AND recenters map to it
+  Future<void> _getAndRecenterToCurrentLocation() async {
+    if (_isLoadingLocation) return;
+
     setState(() {
       _isLoadingLocation = true;
     });
 
     try {
-      // 1. Check if location services are enabled (GPS is on)
+      // Check if location services are enabled
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        // In a real app, you'd show a dialog here.
         print('Location services are disabled.');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please enable location services')),
+          );
+        }
         setState(() => _isLoadingLocation = false);
         return;
       }
 
-      // 2. Check and request permissions
+      // Check and request permissions
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
           print('Location permissions are denied.');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Location permission denied')),
+            );
+          }
           setState(() => _isLoadingLocation = false);
           return;
         }
@@ -414,39 +476,76 @@ class _MapScreenState extends State<MapScreen> {
 
       if (permission == LocationPermission.deniedForever) {
         print('Location permissions are permanently denied.');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Location permission permanently denied')),
+          );
+        }
         setState(() => _isLoadingLocation = false);
         return;
       }
 
-      // 3. Get the current position with high accuracy
+      // Get the current position
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
       print('Current position: ${position.latitude}, ${position.longitude}');
 
-      // 4. Update your map's state with the new location
       final currentLatLng = LatLng(position.latitude, position.longitude);
-      _userCurrentLocation = currentLatLng;
-      // Update the selected start location to the user's current location
+
       setState(() {
-        _selectedStartCoordinates = currentLatLng;
-        _selectedStartLabel = 'Current Location';
-        _hasSelectedStart = true;
-        _startLocationController.text = 'Current Location';
-        _startSuggestions = const []; // Clear any suggestions
+        _userCurrentLocation = currentLatLng;
+        _isLoadingLocation = false;
       });
 
-      // Move the map camera to the user's location
+      // Recenter the map to the user's location
       _mapController.move(currentLatLng, _currentZoom());
 
     } catch (e) {
       print('Error getting location: $e');
-    } finally {
       if (mounted) {
-        setState(() {
-          _isLoadingLocation = false;
-        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error getting location: $e')),
+        );
       }
+      setState(() {
+        _isLoadingLocation = false;
+      });
+    }
+  }
+
+  void _setStartToCurrentLocation() {
+    if (_userCurrentLocation != null) {
+      setState(() {
+        _selectedStartCoordinates = _userCurrentLocation!;
+        _selectedStartLabel = 'Current Location';
+        _hasSelectedStart = true;
+        _startLocationController.text = 'Current Location';
+        _routeStatusMessage = null;
+        _generatedRoutePoints = const [];
+        _startSuggestions = const [];
+        _startSearchError = null;
+        _hasSearchedStart = false;
+        _isSearchingStart = false;
+      });
+
+      _startLocationFocusNode.unfocus();
+      _mapController.move(_userCurrentLocation!, math.max(_currentZoom(), 14));
+
+      // Show a snackbar to confirm
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Starting point set to your current location'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to get current location. Please tap the location button first.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
     }
   }
 
@@ -457,7 +556,6 @@ class _MapScreenState extends State<MapScreen> {
 
       if (!_hasSelectedStart || (_hasSelectedStart && _hasSelectedDestination)) {
         _selectedStartCoordinates = point;
-        _userCurrentLocation = point;
         _selectedStartLabel = 'Selected on map';
         _hasSelectedStart = true;
         _hasSelectedDestination = false;
@@ -539,7 +637,6 @@ class _MapScreenState extends State<MapScreen> {
 
   void _handleStartSubmitted(String value) {
     final coordinates = _parseCoordinates(value);
-    _userCurrentLocation = coordinates;
     if (coordinates == null) {
       setState(() {
         _routeStatusMessage = 'Enter coordinates as "lat, lng".';
@@ -726,7 +823,7 @@ class _MapScreenState extends State<MapScreen> {
       curve: Curves.easeOut,
       left: 0,
       right: 0,
-      top: _isSearchOpen ? 0 : -220,
+      top: _isSearchOpen ? 0 : -420,
       child: Material(
         elevation: 4,
         color: Theme.of(context).colorScheme.surface,
@@ -763,7 +860,7 @@ class _MapScreenState extends State<MapScreen> {
                 TextField(
                   controller: _startLocationController,
                   decoration: const InputDecoration(
-                    labelText: 'Start location (lat, lng)',
+                    labelText: 'Start location',
                     prefixIcon: Icon(Icons.trip_origin),
                     border: OutlineInputBorder(),
                   ),
@@ -808,11 +905,25 @@ class _MapScreenState extends State<MapScreen> {
                       },
                     ),
                   ),
+                // Button to set current location as starting point
+                if (_userCurrentLocation != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: OutlinedButton.icon(
+                      onPressed: _setStartToCurrentLocation,
+                      icon: const Icon(Icons.my_location, size: 18),
+                      label: const Text('Use current location as starting point'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.green,
+                        side: const BorderSide(color: Colors.green),
+                      ),
+                    ),
+                  ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: _destinationController,
                   decoration: const InputDecoration(
-                    labelText: 'Destination (lat, lng)',
+                    labelText: 'Destination',
                     prefixIcon: Icon(Icons.flag),
                     border: OutlineInputBorder(),
                   ),
@@ -872,6 +983,19 @@ class _MapScreenState extends State<MapScreen> {
                             : const Text('Generate route'),
                       ),
                     ),
+                    Center(
+                      child: IconButton(
+                        onPressed: (_hasSelectedStart && _hasSelectedDestination)
+                            ? _swapStartAndDestination
+                            : null,
+                        icon: const Icon(Icons.swap_vert, size: 32),
+                        tooltip: 'Swap start and destination',
+                        color: (_hasSelectedStart && _hasSelectedDestination)
+                            ? Theme.of(context).primaryColor
+                            : Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                   ],
                 ),
               ],
@@ -919,8 +1043,8 @@ class _MapScreenState extends State<MapScreen> {
           ),
           const SizedBox(height: 16),
           FloatingActionButton(
-            onPressed: _isLoadingLocation ? null : _getCurrentLocation,
-            tooltip: 'My Location',
+            onPressed: _isLoadingLocation ? null : _getAndRecenterToCurrentLocation,
+            tooltip: 'Get my location and recenter',
             child: _isLoadingLocation
                 ? const SizedBox(
               height: 24,
@@ -950,6 +1074,48 @@ class _MapScreenState extends State<MapScreen> {
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'betterroads',
               ),
+              if (_userCurrentLocation != null)
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: _userCurrentLocation!,
+                      width: 80,
+                      height: 80,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // Pulsing outer circle
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.blue.withValues(alpha: 0.2),
+                            ),
+                          ),
+                          // Inner dot
+                          Container(
+                            width: 16,
+                            height: 16,
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.blue,
+                            ),
+                          ),
+                          // Center white dot
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               if (_generatedRoutePoints.isNotEmpty)
                 PolylineLayer(
                   key: const Key('route-polyline-layer'),
