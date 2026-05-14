@@ -1559,7 +1559,7 @@ class _MapScreenState extends State<MapScreen> {
             ),
             searchPanel,
             // route info panel
-            if (_hasRouteInfo && _generatedRoutePoints.isNotEmpty && !_isSearchOpen)
+            if (!_isSearchOpen && ((_hasRouteInfo && _generatedRoutePoints.isNotEmpty) || _isComputingRoute))
               Positioned(
                 top: 12,
                 left: 12,
@@ -1569,6 +1569,7 @@ class _MapScreenState extends State<MapScreen> {
                   durationText: _routeDuration,
                   currentMode: _routeMode,
                   onModeToggle: _toggleRouteMode,
+                  isLoading: _isComputingRoute,
                 ),
               ),
             //hint text for map tap
