@@ -43,7 +43,7 @@ class _MapScreenState extends State<MapScreen> {
 
   late final ComputeRouteCallback _computeRoute;
   late final RouteApiService _routeApiService;
-
+  LatLng? _userCurrentLocation;
   Timer? _startSearchDebounce;
   Timer? _destinationSearchDebounce;
   List<Location> _startSuggestions = const [];
@@ -161,7 +161,7 @@ class _MapScreenState extends State<MapScreen> {
     try {
       print('Searching for: $query');
 
-      final locations = await PhotonService.searchLocations(query, locationBias: _hasSelectedStart ? _selectedStartCoordinates : null,);
+      final locations = await PhotonService.searchLocations(query,locationBias:  _hasSelectedStart ? _selectedStartCoordinates : null,);
 
       print('Got ${locations.length} results');
 
@@ -286,7 +286,7 @@ class _MapScreenState extends State<MapScreen> {
     });
 
     try {
-      final locations = await PhotonService.searchLocations(query);
+      final locations = await PhotonService.searchLocations(query, locationBias: _hasSelectedStart ? _selectedStartCoordinates : null);
       if (!mounted || requestId != _destinationSearchRequestId) {
         return;
       }
@@ -425,7 +425,7 @@ class _MapScreenState extends State<MapScreen> {
 
       // 4. Update your map's state with the new location
       final currentLatLng = LatLng(position.latitude, position.longitude);
-
+      _userCurrentLocation = currentLatLng;
       // Update the selected start location to the user's current location
       setState(() {
         _selectedStartCoordinates = currentLatLng;
