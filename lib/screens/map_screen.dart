@@ -6,22 +6,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+import '../models/route_metrics.dart';
 import '../services/route_api_service.dart';
 import '../services/photon_service.dart';
 import '../models/location.dart';
 import '../widgets/route_info_panel.dart';
 
-typedef ComputeRouteCallback = Future<String> Function({
-required LatLng start,
-required LatLng destination,
-});
+typedef ComputeRouteCallback =
+    Future<String> Function({
+      required LatLng start,
+      required LatLng destination,
+    });
 
 class MapScreen extends StatefulWidget {
-  const MapScreen({
-    super.key,
-    this.computeRoute,
-    this.routeApiBaseUrl,
-  });
+  const MapScreen({super.key, this.computeRoute, this.routeApiBaseUrl});
 
   final ComputeRouteCallback? computeRoute;
   final String? routeApiBaseUrl;
@@ -36,7 +34,7 @@ class _MapScreenState extends State<MapScreen> {
 
   final MapController _mapController = MapController();
   final TextEditingController _startLocationController =
-  TextEditingController();
+      TextEditingController();
   final TextEditingController _destinationController = TextEditingController();
   final FocusNode _startLocationFocusNode = FocusNode();
   final FocusNode _destinationFocusNode = FocusNode();
@@ -149,7 +147,7 @@ class _MapScreenState extends State<MapScreen> {
 
     _startSearchDebounce = Timer(
       const Duration(milliseconds: 350),
-          () => _searchStartLocation(query),
+      () => _searchStartLocation(query),
     );
   }
 
@@ -164,8 +162,10 @@ class _MapScreenState extends State<MapScreen> {
     try {
       print('Searching for: $query');
 
-      final locations = await PhotonService.searchLocations(query,
-          locationBias: _userCurrentLocation);
+      final locations = await PhotonService.searchLocations(
+        query,
+        locationBias: _userCurrentLocation,
+      );
 
       print('Got ${locations.length} results');
 
@@ -244,7 +244,9 @@ class _MapScreenState extends State<MapScreen> {
           content: const Text('Please select both start and destination first'),
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
       return;
@@ -322,7 +324,7 @@ class _MapScreenState extends State<MapScreen> {
 
     _destinationSearchDebounce = Timer(
       const Duration(milliseconds: 350),
-          () => _searchDestination(query),
+      () => _searchDestination(query),
     );
   }
 
@@ -353,8 +355,10 @@ class _MapScreenState extends State<MapScreen> {
     });
 
     try {
-      final locations = await PhotonService.searchLocations(query,
-          locationBias: _userCurrentLocation);
+      final locations = await PhotonService.searchLocations(
+        query,
+        locationBias: _userCurrentLocation,
+      );
       if (!mounted || requestId != _destinationSearchRequestId) {
         return;
       }
@@ -470,7 +474,9 @@ class _MapScreenState extends State<MapScreen> {
             SnackBar(
               content: const Text('Please enable location services'),
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
           );
         }
@@ -488,7 +494,9 @@ class _MapScreenState extends State<MapScreen> {
               SnackBar(
                 content: const Text('Location permission denied'),
                 behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             );
           }
@@ -504,7 +512,9 @@ class _MapScreenState extends State<MapScreen> {
             SnackBar(
               content: const Text('Location permission permanently denied'),
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
           );
         }
@@ -525,7 +535,6 @@ class _MapScreenState extends State<MapScreen> {
       });
 
       _mapController.move(currentLatLng, _currentZoom());
-
     } catch (e) {
       print('Error getting location: $e');
       if (mounted) {
@@ -533,7 +542,9 @@ class _MapScreenState extends State<MapScreen> {
           SnackBar(
             content: Text('Error getting location: $e'),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
       }
@@ -566,16 +577,22 @@ class _MapScreenState extends State<MapScreen> {
           content: const Text('Starting point set to your current location'),
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Unable to get current location. Please tap the location button first.'),
+          content: const Text(
+            'Unable to get current location. Please tap the location button first.',
+          ),
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
     }
@@ -586,13 +603,14 @@ class _MapScreenState extends State<MapScreen> {
       _routeStatusMessage = null;
       _generatedRoutePoints = const [];
 
-      if (!_hasSelectedStart || (_hasSelectedStart && _hasSelectedDestination)) {
+      if (!_hasSelectedStart ||
+          (_hasSelectedStart && _hasSelectedDestination)) {
         _selectedStartCoordinates = point;
         _selectedStartLabel = 'Selected on map';
         _hasSelectedStart = true;
         _hasSelectedDestination = false;
         _startLocationController.text =
-        '${point.latitude.toStringAsFixed(5)}, ${point.longitude.toStringAsFixed(5)}';
+            '${point.latitude.toStringAsFixed(5)}, ${point.longitude.toStringAsFixed(5)}';
         _destinationController.clear();
         return;
       }
@@ -601,7 +619,7 @@ class _MapScreenState extends State<MapScreen> {
       _selectedDestinationLabel = 'Selected on map';
       _hasSelectedDestination = true;
       _destinationController.text =
-      '${point.latitude.toStringAsFixed(5)}, ${point.longitude.toStringAsFixed(5)}';
+          '${point.latitude.toStringAsFixed(5)}, ${point.longitude.toStringAsFixed(5)}';
     });
   }
 
@@ -643,7 +661,6 @@ class _MapScreenState extends State<MapScreen> {
       _parseRouteInfo(response);
       _fitRouteOnScreen(routePoints);
       _closeSearch(); // close panel and show route
-
     } on _RouteResponseException catch (error) {
       if (!mounted) {
         return;
@@ -672,6 +689,7 @@ class _MapScreenState extends State<MapScreen> {
       }
     }
   }
+
   void _fitRouteOnScreen(List<LatLng> routePoints) {
     if (routePoints.isEmpty) return;
 
@@ -691,6 +709,7 @@ class _MapScreenState extends State<MapScreen> {
     // move to center with zoom level 13 (adjust if want)
     _mapController.move(center, 14);
   }
+
   void _handleStartSubmitted(String value) {
     final coordinates = _parseCoordinates(value);
     if (coordinates == null) {
@@ -897,7 +916,10 @@ class _MapScreenState extends State<MapScreen> {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Color(0xFF4A90E2), width: 2),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -947,10 +969,11 @@ class _MapScreenState extends State<MapScreen> {
                           const SizedBox(width: 12),
                           Text(
                             'Plan your route',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF2C3E50),
-                            ),
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF2C3E50),
+                                ),
                           ),
                         ],
                       ),
@@ -992,9 +1015,16 @@ class _MapScreenState extends State<MapScreen> {
                       decoration: InputDecoration(
                         labelText: 'Start location',
                         labelStyle: TextStyle(color: Colors.grey.shade600),
-                        prefixIcon: const Icon(Icons.trip_origin, color: Color(0xFF4A90E2), size: 22),
+                        prefixIcon: const Icon(
+                          Icons.trip_origin,
+                          color: Color(0xFF4A90E2),
+                          size: 22,
+                        ),
                         border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
                       ),
                       textInputAction: TextInputAction.next,
                       onChanged: _onStartLocationChanged,
@@ -1006,7 +1036,10 @@ class _MapScreenState extends State<MapScreen> {
                       padding: const EdgeInsets.only(top: 8),
                       child: Text(
                         'No results found',
-                        style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                        style: TextStyle(
+                          color: Colors.grey.shade500,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   if (_startSuggestions.isNotEmpty)
@@ -1032,18 +1065,26 @@ class _MapScreenState extends State<MapScreen> {
                             onTap: () => _selectStartLocation(location),
                             borderRadius: BorderRadius.circular(12),
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     _getDisplayName(location),
-                                    style: const TextStyle(fontWeight: FontWeight.w500),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     '${location.lat.toStringAsFixed(4)}, ${location.lon.toStringAsFixed(4)}',
-                                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade500,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -1081,9 +1122,16 @@ class _MapScreenState extends State<MapScreen> {
                       decoration: InputDecoration(
                         labelText: 'Destination',
                         labelStyle: TextStyle(color: Colors.grey.shade600),
-                        prefixIcon: const Icon(Icons.flag, color: Color(0xFFE74C3C), size: 22),
+                        prefixIcon: const Icon(
+                          Icons.flag,
+                          color: Color(0xFFE74C3C),
+                          size: 22,
+                        ),
                         border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
                       ),
                       textInputAction: TextInputAction.done,
                       onChanged: _onDestinationChanged,
@@ -1095,7 +1143,10 @@ class _MapScreenState extends State<MapScreen> {
                       padding: const EdgeInsets.only(top: 8),
                       child: Text(
                         'No results found',
-                        style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                        style: TextStyle(
+                          color: Colors.grey.shade500,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   if (_destinationSuggestions.isNotEmpty)
@@ -1121,18 +1172,26 @@ class _MapScreenState extends State<MapScreen> {
                             onTap: () => _selectDestination(location),
                             borderRadius: BorderRadius.circular(12),
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     _getDisplayName(location),
-                                    style: const TextStyle(fontWeight: FontWeight.w500),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     '${location.lat.toStringAsFixed(4)}, ${location.lon.toStringAsFixed(4)}',
-                                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade500,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -1158,21 +1217,29 @@ class _MapScreenState extends State<MapScreen> {
                           ),
                           child: _isComputingRoute
                               ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
                               : const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.route, size: 20),
-                              SizedBox(width: 8),
-                              Text('Generate route', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                            ],
-                          ),
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.route, size: 20),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'Generate route',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -1183,13 +1250,15 @@ class _MapScreenState extends State<MapScreen> {
                               : Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: (_hasSelectedStart && _hasSelectedDestination)
+                            color:
+                                (_hasSelectedStart && _hasSelectedDestination)
                                 ? const Color(0xFF4A90E2).withValues(alpha: 0.3)
                                 : Colors.grey.shade200,
                           ),
                         ),
                         child: IconButton(
-                          onPressed: (_hasSelectedStart && _hasSelectedDestination)
+                          onPressed:
+                              (_hasSelectedStart && _hasSelectedDestination)
                               ? _swapStartAndDestination
                               : null,
                           icon: const Icon(Icons.swap_horiz, size: 24),
@@ -1220,8 +1289,12 @@ class _MapScreenState extends State<MapScreen> {
                         child: Row(
                           children: [
                             Icon(
-                              _isRouteStatusError ? Icons.error_outline : Icons.check_circle_outline,
-                              color: _isRouteStatusError ? Colors.red : Colors.green,
+                              _isRouteStatusError
+                                  ? Icons.error_outline
+                                  : Icons.check_circle_outline,
+                              color: _isRouteStatusError
+                                  ? Colors.red
+                                  : Colors.green,
                               size: 20,
                             ),
                             const SizedBox(width: 8),
@@ -1229,7 +1302,9 @@ class _MapScreenState extends State<MapScreen> {
                               child: Text(
                                 _routeStatusMessage!,
                                 style: TextStyle(
-                                  color: _isRouteStatusError ? Colors.red.shade700 : Colors.green.shade700,
+                                  color: _isRouteStatusError
+                                      ? Colors.red.shade700
+                                      : Colors.green.shade700,
                                   fontSize: 13,
                                 ),
                               ),
@@ -1256,7 +1331,7 @@ class _MapScreenState extends State<MapScreen> {
           color: Colors.green,
           size: 42,
           shadows: [
-            Shadow(offset: Offset(0, 1), blurRadius: 2, color: Colors.black26)
+            Shadow(offset: Offset(0, 1), blurRadius: 2, color: Colors.black26),
           ],
         ),
       ),
@@ -1269,7 +1344,7 @@ class _MapScreenState extends State<MapScreen> {
           color: Colors.red,
           size: 36,
           shadows: [
-            Shadow(offset: Offset(0, 1), blurRadius: 2, color: Colors.black26)
+            Shadow(offset: Offset(0, 1), blurRadius: 2, color: Colors.black26),
           ],
         ),
       ),
@@ -1315,7 +1390,9 @@ class _MapScreenState extends State<MapScreen> {
               child: FloatingActionButton(
                 onPressed: _toggleSearch,
                 tooltip: _isSearchOpen ? 'Close search' : 'Open search',
-                backgroundColor: _isSearchOpen ? Colors.grey.shade700 : const Color(0xFF4A90E2),
+                backgroundColor: _isSearchOpen
+                    ? Colors.grey.shade700
+                    : const Color(0xFF4A90E2),
                 child: Icon(_isSearchOpen ? Icons.close : Icons.search),
               ),
             ),
@@ -1331,19 +1408,23 @@ class _MapScreenState extends State<MapScreen> {
                 ],
               ),
               child: FloatingActionButton(
-                onPressed: _isLoadingLocation ? null : _getAndRecenterToCurrentLocation,
+                onPressed: _isLoadingLocation
+                    ? null
+                    : _getAndRecenterToCurrentLocation,
                 tooltip: 'Get my location',
                 backgroundColor: Colors.white,
                 foregroundColor: const Color(0xFF4A90E2),
                 child: _isLoadingLocation
                     ? const SizedBox(
-                  height: 24,
-                  width: 24,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4A90E2)),
-                  ),
-                )
+                        height: 24,
+                        width: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Color(0xFF4A90E2),
+                          ),
+                        ),
+                      )
                     : const Icon(Icons.my_location),
               ),
             ),
@@ -1386,7 +1467,9 @@ class _MapScreenState extends State<MapScreen> {
                                 height: 40,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: const Color(0xFF4A90E2).withValues(alpha: 0.3),
+                                  color: const Color(
+                                    0xFF4A90E2,
+                                  ).withValues(alpha: 0.3),
                                 ),
                               ),
                             ),
@@ -1427,34 +1510,48 @@ class _MapScreenState extends State<MapScreen> {
                       ),
                     ],
                   ),
-                MarkerLayer(
-                  markers: markers,
-                ),
+                MarkerLayer(markers: markers),
               ],
             ),
             searchPanel,
-            if (_hasRouteInfo && _generatedRoutePoints.isNotEmpty)
-              RouteInfoPanel(
-                distanceText: _routeDistance,
-                durationText: _routeDuration,
+            if (!_hasRouteInfo || _isSearchOpen)
+              Positioned(
+                bottom: 20,
+                left: 20,
+                right: 20,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.7),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    'Tap on map to select locations',
+                    style: TextStyle(color: Colors.white, fontSize: 11),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
               ),
-            // hint text for map tap
+            //hint text for map tap
             Positioned(
               bottom: 20,
               left: 20,
               right: 20,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.7),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Text(
                   'Tap on map to select locations',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                  ),
+                  style: TextStyle(color: Colors.white, fontSize: 11),
                   textAlign: TextAlign.center,
                 ),
               ),
