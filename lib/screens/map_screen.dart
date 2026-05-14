@@ -16,6 +16,7 @@ typedef ComputeRouteCallback =
     Future<String> Function({
       required LatLng start,
       required LatLng destination,
+      String mode,
     });
 
 class MapScreen extends StatefulWidget {
@@ -1563,6 +1564,8 @@ class _MapScreenState extends State<MapScreen> {
                 child: RouteInfoPanel(
                   distanceText: _routeDistance,
                   durationText: _routeDuration,
+                  currentMode: _routeMode,
+                  onModeToggle: _toggleRouteMode,
                 ),
               ),
             //hint text for map tap
