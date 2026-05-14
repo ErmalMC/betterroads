@@ -23,18 +23,19 @@ A Flutter navigation app that finds the smoothest paths by balancing distance wi
 - **Coordinate entry** - Manual input for precise locations (e.g., "41.9981, 21.4254")
 - **Swap button** - Exchange start and destination instantly
 
-  ### Map Experience
+### Map Experience
 - **OpenStreetMap tiles** - Free, detailed global maps
 - **Live location tracking** - Real-time position with pulsing blue dot
 - **Follow mode toggle** - Auto-follow your movement or freely explore
 - **Route visualization** - Clear blue polyline showing your path
 - **Interactive markers** - Green start pin, red destination flag
 
-  ### Route Information
+### Route Information
 - **Distance display** - Shows total route length
 - **Time estimation** - Based on driving/walking speeds
 - **Persistent panel** - Route info stays visible while navigating
 - **Loading states** - Visual feedback during route calculation
+
 
 ## Installation
 
