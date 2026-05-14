@@ -29,7 +29,7 @@ class RouteMetrics {
     if (minutes > 0) {
       return '$minutes min';
     }
-    return '$durationSeconds sec';
+    return '<1 min';
   }
 
   factory RouteMetrics.fromJson(Map<String, dynamic> json) {

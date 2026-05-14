@@ -22,6 +22,7 @@ class RouteApiService {
   Future<String> computeRoute({
     required LatLng start,
     required LatLng destination,
+    String mode = 'driving', // 'driving' or 'walking'
   }) async {
     final uri = Uri.parse('$_baseUrl/api/route');
     final payload = {
@@ -29,15 +30,15 @@ class RouteApiService {
       'origin_lon': start.longitude,
       'dest_lat': destination.latitude,
       'dest_lon': destination.longitude,
-      'mode': 'driving',
+      'mode': mode,
     };
 
     final response = await _client
         .post(
-          uri,
-          headers: const {'Content-Type': 'application/json'},
-          body: jsonEncode(payload),
-        )
+      uri,
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode(payload),
+    )
         .timeout(const Duration(seconds: 12));
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -53,4 +54,3 @@ class RouteApiService {
     _client.close();
   }
 }
-

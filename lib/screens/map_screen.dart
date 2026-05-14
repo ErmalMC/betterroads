@@ -69,6 +69,8 @@ class _MapScreenState extends State<MapScreen> {
   String? _routeStatusMessage;
   bool _isRouteStatusError = false;
   List<LatLng> _generatedRoutePoints = const [];
+  StreamSubscription<Position>? _positionSubscription;
+  bool _followUser = true;
   bool _isSearchOpen = const bool.fromEnvironment('FLUTTER_TEST');
 
   bool get _showNoResults {
@@ -104,6 +106,7 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void dispose() {
     _startSearchDebounce?.cancel();
+    _positionSubscription?.cancel();
     _destinationSearchDebounce?.cancel();
     _startLocationController.dispose();
     _destinationController.dispose();
@@ -112,6 +115,28 @@ class _MapScreenState extends State<MapScreen> {
     _mapController.dispose();
     _routeApiService.dispose();
     super.dispose();
+  }
+
+  void _startLiveLocationTracking() {
+    const settings = LocationSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 5, // update every 5 meters
+    );
+
+    _positionSubscription = Geolocator.getPositionStream(
+      locationSettings: settings,
+    ).listen((Position position) {
+      final newLatLng = LatLng(position.latitude, position.longitude);
+
+      setState(() {
+        _userCurrentLocation = newLatLng;
+      });
+
+
+      if (_followUser) {
+        _mapController.move(newLatLng, _currentZoom());
+      }
+    });
   }
 
   void _onStartLocationChanged(String value) {
@@ -533,6 +558,8 @@ class _MapScreenState extends State<MapScreen> {
         _userCurrentLocation = currentLatLng;
         _isLoadingLocation = false;
       });
+
+      _startLiveLocationTracking();
 
       _mapController.move(currentLatLng, _currentZoom());
     } catch (e) {
