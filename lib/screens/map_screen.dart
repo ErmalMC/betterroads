@@ -593,7 +593,7 @@ class _MapScreenState extends State<MapScreen> {
         _routeStatusMessage = 'Select both start and destination first.';
         _isRouteStatusError = true;
       });
-      return;
+      return; // show that user needs to put locations
     }
 
     setState(() {
@@ -618,6 +618,10 @@ class _MapScreenState extends State<MapScreen> {
         _routeStatusMessage = 'Route generated successfully!';
         _isRouteStatusError = false;
       });
+
+      _fitRouteOnScreen(routePoints);
+      _closeSearch(); // close panel and show route
+
     } on _RouteResponseException catch (error) {
       if (!mounted) {
         return;
@@ -627,6 +631,7 @@ class _MapScreenState extends State<MapScreen> {
         _routeStatusMessage = error.message;
         _isRouteStatusError = true;
       });
+      // Search panel stays open
     } catch (_) {
       if (!mounted) {
         return;
@@ -636,6 +641,7 @@ class _MapScreenState extends State<MapScreen> {
         _routeStatusMessage = 'Unable to compute route.';
         _isRouteStatusError = true;
       });
+      // Search panel stays open
     } finally {
       if (mounted) {
         setState(() {
@@ -644,7 +650,25 @@ class _MapScreenState extends State<MapScreen> {
       }
     }
   }
+  void _fitRouteOnScreen(List<LatLng> routePoints) {
+    if (routePoints.isEmpty) return;
 
+    // calculate center of the route
+    double sumLat = 0;
+    double sumLng = 0;
+
+    for (final point in routePoints) {
+      sumLat += point.latitude;
+      sumLng += point.longitude;
+    }
+
+    final centerLat = sumLat / routePoints.length;
+    final centerLng = sumLng / routePoints.length;
+    final center = LatLng(centerLat, centerLng);
+
+    // move to center with zoom level 13 (adjust if want)
+    _mapController.move(center, 13);
+  }
   void _handleStartSubmitted(String value) {
     final coordinates = _parseCoordinates(value);
     if (coordinates == null) {
