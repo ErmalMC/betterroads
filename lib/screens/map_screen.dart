@@ -161,7 +161,7 @@ class _MapScreenState extends State<MapScreen> {
     try {
       print('Searching for: $query');
 
-      final locations = await PhotonService.searchLocations(query,locationBias:  _hasSelectedStart ? _selectedStartCoordinates : null,);
+      final locations = await PhotonService.searchLocations(query,locationBias:  _userCurrentLocation,);
 
       print('Got ${locations.length} results');
 
@@ -193,6 +193,7 @@ class _MapScreenState extends State<MapScreen> {
     _startSearchRequestId++;
 
     final selectedPoint = LatLng(location.lat, location.lon);
+    _userCurrentLocation = selectedPoint;
     final displayName = _getDisplayName(location);
 
     setState(() {
@@ -286,7 +287,7 @@ class _MapScreenState extends State<MapScreen> {
     });
 
     try {
-      final locations = await PhotonService.searchLocations(query, locationBias: _hasSelectedStart ? _selectedStartCoordinates : null);
+      final locations = await PhotonService.searchLocations(query, locationBias: _userCurrentLocation);
       if (!mounted || requestId != _destinationSearchRequestId) {
         return;
       }
@@ -456,6 +457,7 @@ class _MapScreenState extends State<MapScreen> {
 
       if (!_hasSelectedStart || (_hasSelectedStart && _hasSelectedDestination)) {
         _selectedStartCoordinates = point;
+        _userCurrentLocation = point;
         _selectedStartLabel = 'Selected on map';
         _hasSelectedStart = true;
         _hasSelectedDestination = false;
@@ -537,6 +539,7 @@ class _MapScreenState extends State<MapScreen> {
 
   void _handleStartSubmitted(String value) {
     final coordinates = _parseCoordinates(value);
+    _userCurrentLocation = coordinates;
     if (coordinates == null) {
       setState(() {
         _routeStatusMessage = 'Enter coordinates as "lat, lng".';
