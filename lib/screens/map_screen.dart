@@ -615,7 +615,6 @@ class _MapScreenState extends State<MapScreen> {
 
       setState(() {
         _generatedRoutePoints = routePoints;
-        _routeStatusMessage = 'Route generated successfully!';
         _isRouteStatusError = false;
       });
 
@@ -667,7 +666,7 @@ class _MapScreenState extends State<MapScreen> {
     final center = LatLng(centerLat, centerLng);
 
     // move to center with zoom level 13 (adjust if want)
-    _mapController.move(center, 13);
+    _mapController.move(center, 14);
   }
   void _handleStartSubmitted(String value) {
     final coordinates = _parseCoordinates(value);
