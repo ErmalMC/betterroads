@@ -329,27 +329,18 @@ class _MapScreenState extends State<MapScreen> {
   void _parseRouteInfo(String response) {
     try {
       final decoded = jsonDecode(response);
-      if (decoded is Map<String, dynamic>) {
-        setState(() {
-          // adjust these keys based on the
-          _routeDistance = decoded['distance'] ?? decoded['summary']?['distance'] ?? 'Unknown';
-          _routeDuration = decoded['duration'] ?? decoded['summary']?['duration'] ?? 'Unknown';
+      final routeMetrics = RouteMetrics.fromJson(decoded);
 
-          // format if needed (e.g., convert meters to km, seconds to minutes)
-          if (_routeDistance is num) {
-            double distInKm = (_routeDistance as num) / 1000;
-            _routeDistance = '${distInKm.toStringAsFixed(1)} km';
-          }
-          if (_routeDuration is num) {
-            int minutes = (_routeDuration as num) ~/ 60;
-            _routeDuration = '$minutes min';
-          }
-
-          _hasRouteInfo = true;
-        });
-      }
+      setState(() {
+        _routeDistance = routeMetrics.formattedDistance;
+        _routeDuration = routeMetrics.formattedDuration;
+        _hasRouteInfo = true;
+      });
     } catch (e) {
       print('Error parsing route info: $e');
+      setState(() {
+        _hasRouteInfo = false;
+      });
     }
   }
 
