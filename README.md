@@ -51,7 +51,7 @@ A Flutter navigation app that finds the smoothest paths by balancing distance wi
 ### Setup
 
 1. **Clone the repository**
-`git clone https://github.com/yourusername/better-roads.git`
+`git clone https://https://github.com/ErmalMC/betterroads.git`
 
 
 2. **Install flutter dependencies**
@@ -71,7 +71,7 @@ lib/
     └── route_metrics.dart        # Distance/duration parsing
 ├── screens/
 │   └── map_screen.dart           # Main map UI with all logic
-├── 
+│
 ├── services/
 │   ├── route_api_service.dart    # Backend API communication
 │   └── photon_service.dart       # Location search (OpenStreetMap)
